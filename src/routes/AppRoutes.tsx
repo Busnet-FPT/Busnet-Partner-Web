@@ -8,13 +8,13 @@ import SchedulesPage from '@/pages/SchedulesPage'
 // import BookingsPage from '@/pages/BookingsPage'
 // import TicketsPage from '@/pages/TicketsPage'
 // import ProfilePage from '@/pages/ProfilePage'
-// import LoginPage from '@/pages/LoginPage'
+import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    // element: <LoginPage />,
+    element: <LoginPage />,
   },
   {
     path: '/',
