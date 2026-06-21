@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BadgeCheck,
   Banknote,
   Building2,
+  Edit,
   FileText,
   Mail,
   Phone,
+  Save,
   ShieldCheck,
   Star,
+  X,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -20,7 +25,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import api from '@/services/api'
 
 type PartnerProfile = {
@@ -65,6 +80,21 @@ type PartnerProfileResponse = {
 
 type ApiErrorResponse = {
   message?: string
+}
+
+type ProfileFormState = {
+  fullName: string
+  phone: string
+  operatorName: string
+  operatorPhone: string
+  description: string
+  amenitiesText: string
+  policiesText: string
+  bankName: string
+  bankAccountName: string
+  bankNumber: string
+  bankBranch: string
+  taxCode: string
 }
 
 function getInitials(name?: string) {
@@ -127,6 +157,27 @@ function getApiStatus(error: unknown) {
   return undefined
 }
 
+function createProfileForm(profile: PartnerProfile): ProfileFormState {
+  const policiesText = Array.isArray(profile.policies)
+    ? JSON.stringify({ general: profile.policies.join('\n') }, null, 2)
+    : JSON.stringify(profile.policies || {}, null, 2)
+
+  return {
+    fullName: profile.accountInfo?.fullName || '',
+    phone: profile.accountInfo?.phone || '',
+    operatorName: profile.operatorName || '',
+    operatorPhone: profile.operatorPhone || '',
+    description: profile.description || '',
+    amenitiesText: profile.amenities?.join(', ') || '',
+    policiesText,
+    bankName: profile.bankName || '',
+    bankAccountName: profile.bankAccountName || '',
+    bankNumber: profile.bankNumber || '',
+    bankBranch: profile.bankBranch || '',
+    taxCode: profile.taxCode || '',
+  }
+}
+
 function DetailItem({
   label,
   value,
@@ -149,6 +200,127 @@ function ProfilePage() {
   const [profile, setProfile] = useState<PartnerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [form, setForm] = useState<ProfileFormState | null>(null)
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null,
+  )
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
+  const [previewImage, setPreviewImage] = useState<{
+    title: string
+    src: string
+  } | null>(null)
+
+  const updateFormField = (field: keyof ProfileFormState, value: string) => {
+    setForm((current) => (current ? { ...current, [field]: value } : current))
+  }
+
+  const startEditing = () => {
+    if (!profile) {
+      return
+    }
+
+    setForm(createProfileForm(profile))
+    setProfilePictureFile(null)
+    setCoverImageFile(null)
+    setSuccessMessage('')
+    setErrorMessage('')
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setForm(profile ? createProfileForm(profile) : null)
+    setProfilePictureFile(null)
+    setCoverImageFile(null)
+    setErrorMessage('')
+  }
+
+  const handleUpdateProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!form) {
+      return
+    }
+
+    let policies: Record<string, unknown> = {}
+
+    try {
+      policies = form.policiesText.trim()
+        ? JSON.parse(form.policiesText)
+        : {}
+
+      if (!policies || typeof policies !== 'object' || Array.isArray(policies)) {
+        throw new Error()
+      }
+    } catch {
+      setErrorMessage('Policies must be a valid JSON object.')
+      return
+    }
+
+    const amenities = form.amenitiesText
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+
+    const formData = new FormData()
+    formData.append('fullName', form.fullName)
+    formData.append('phone', form.phone)
+    formData.append('operatorName', form.operatorName)
+    formData.append('operatorPhone', form.operatorPhone)
+    formData.append('description', form.description)
+    formData.append('amenities', JSON.stringify(amenities))
+    formData.append('policies', JSON.stringify(policies))
+    formData.append('bankName', form.bankName)
+    formData.append('bankAccountName', form.bankAccountName)
+    formData.append('bankNumber', form.bankNumber)
+    formData.append('bankBranch', form.bankBranch)
+    formData.append('taxCode', form.taxCode)
+
+    if (profilePictureFile) {
+      formData.append('profilePicture', profilePictureFile)
+    }
+
+    if (coverImageFile) {
+      formData.append('coverImage', coverImageFile)
+    }
+
+    setIsSaving(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      const response = await api.patch<PartnerProfileResponse>(
+        '/partner/profile/me',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      )
+
+      setProfile(response.data.data)
+      setForm(createProfileForm(response.data.data))
+      setProfilePictureFile(null)
+      setCoverImageFile(null)
+      setIsEditing(false)
+      setSuccessMessage(response.data.message)
+    } catch (error) {
+      if (getApiStatus(error) === 401) {
+        localStorage.removeItem('partnerToken')
+        localStorage.removeItem('partnerAccount')
+        navigate('/login?redirect=/profile', { replace: true })
+        return
+      }
+
+      setErrorMessage(getApiErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -196,7 +368,7 @@ function ProfilePage() {
     )
   }
 
-  if (errorMessage || !profile) {
+  if (!profile) {
     return (
       <div className="space-y-6">
         <div>
@@ -221,26 +393,72 @@ function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Profile</h2>
-        <p className="text-slate-500">View your partner account details.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Profile</h2>
+          <p className="text-slate-500">View your partner account details.</p>
+        </div>
+
+        <Button
+          type="button"
+          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+          onClick={startEditing}
+          disabled={isEditing}
+        >
+          <Edit />
+          Update Profile
+        </Button>
       </div>
 
-      <Card className="rounded-lg">
+      {successMessage ? (
+        <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+          {successMessage}
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <Card className="rounded-lg py-0">
         <div className="h-40 bg-slate-900">
           {profile.coverImage ? (
-            <img
-              src={profile.coverImage}
-              alt={`${displayName} cover`}
-              className="h-full w-full object-cover"
-            />
+            <button
+              type="button"
+              className="group block h-full w-full cursor-zoom-in overflow-hidden text-left"
+              onClick={() =>
+                setPreviewImage({
+                  title: `${displayName} cover image`,
+                  src: profile.coverImage || '',
+                })
+              }
+            >
+              <img
+                src={profile.coverImage}
+                alt={`${displayName} cover`}
+                className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02] group-hover:opacity-90"
+              />
+            </button>
           ) : (
             <div className="flex h-full items-center justify-end px-8">
-              <img
-                src="/logo.jpg"
-                alt="BusNet logo"
-                className="h-24 w-32 rounded-lg bg-white object-cover p-2 opacity-95"
-              />
+              <button
+                type="button"
+                className="cursor-zoom-in rounded-lg"
+                onClick={() =>
+                  setPreviewImage({
+                    title: 'BusNet logo',
+                    src: '/logo.jpg',
+                  })
+                }
+              >
+                <img
+                  src="/logo.jpg"
+                  alt="BusNet logo"
+                  className="h-24 w-32 rounded-lg bg-white object-cover p-2 opacity-95 transition hover:opacity-80"
+                />
+              </button>
             </div>
           )}
         </div>
@@ -248,12 +466,23 @@ function ProfilePage() {
         <CardContent className="-mt-10 pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
-              <Avatar className="size-24 bg-white ring-4 ring-white">
-                <AvatarImage src={avatarUrl} alt={displayName} />
-                <AvatarFallback className="text-xl font-bold text-blue-700">
-                  {getInitials(displayName)}
-                </AvatarFallback>
-              </Avatar>
+              <button
+                type="button"
+                className="cursor-zoom-in rounded-full"
+                onClick={() =>
+                  setPreviewImage({
+                    title: `${displayName} profile picture`,
+                    src: avatarUrl || '/logo.jpg',
+                  })
+                }
+              >
+                <Avatar className="size-24 bg-white ring-4 ring-white transition hover:opacity-85">
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  <AvatarFallback className="text-xl font-bold text-blue-700">
+                    {getInitials(displayName)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-2xl font-bold">{displayName}</h3>
@@ -297,6 +526,311 @@ function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {isEditing && form ? (
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Edit Partner Profile</CardTitle>
+            <CardDescription>
+              Update your partner information. Email and verification status are
+              read-only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-6" onSubmit={handleUpdateProfile}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="profilePicture"
+                    className="font-semibold text-slate-900"
+                  >
+                    Profile picture
+                  </Label>
+                  <div className="rounded-md border border-input bg-transparent px-3 py-3 shadow-xs">
+                    <Label
+                      htmlFor="profilePicture"
+                      className="inline-flex h-9 w-fit cursor-pointer items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 shadow-xs hover:bg-slate-50"
+                    >
+                      Choose file
+                    </Label>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {profilePictureFile?.name || 'No file chosen'}
+                    </p>
+                  </div>
+                  <Input
+                    id="profilePicture"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) =>
+                      setProfilePictureFile(event.target.files?.[0] || null)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="coverImage"
+                    className="font-semibold text-slate-900"
+                  >
+                    Cover image
+                  </Label>
+                  <div className="rounded-md border border-input bg-transparent px-3 py-3 shadow-xs">
+                    <Label
+                      htmlFor="coverImage"
+                      className="inline-flex h-9 w-fit cursor-pointer items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 shadow-xs hover:bg-slate-50"
+                    >
+                      Choose file
+                    </Label>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {coverImageFile?.name || 'No file chosen'}
+                    </p>
+                  </div>
+                  <Input
+                    id="coverImage"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) =>
+                      setCoverImageFile(event.target.files?.[0] || null)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="fullName"
+                    className="font-semibold text-slate-900"
+                  >
+                    Account owner
+                  </Label>
+                  <Input
+                    id="fullName"
+                    value={form.fullName}
+                    onChange={(event) =>
+                      updateFormField('fullName', event.target.value)
+                    }
+                    minLength={2}
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="phone"
+                    className="font-semibold text-slate-900"
+                  >
+                    Account phone
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={form.phone}
+                    onChange={(event) =>
+                      updateFormField('phone', event.target.value)
+                    }
+                    placeholder="09xxxxxxxx"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="operatorName"
+                    className="font-semibold text-slate-900"
+                  >
+                    Operator name
+                  </Label>
+                  <Input
+                    id="operatorName"
+                    value={form.operatorName}
+                    onChange={(event) =>
+                      updateFormField('operatorName', event.target.value)
+                    }
+                    minLength={2}
+                    maxLength={150}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="operatorPhone"
+                    className="font-semibold text-slate-900"
+                  >
+                    Operator phone
+                  </Label>
+                  <Input
+                    id="operatorPhone"
+                    value={form.operatorPhone}
+                    onChange={(event) =>
+                      updateFormField('operatorPhone', event.target.value)
+                    }
+                    placeholder="09xxxxxxxx"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="description"
+                  className="font-semibold text-slate-900"
+                >
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={form.description}
+                  onChange={(event) =>
+                    updateFormField('description', event.target.value)
+                  }
+                  maxLength={2000}
+                  className="min-h-28"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="amenities"
+                    className="font-semibold text-slate-900"
+                  >
+                    Amenities
+                  </Label>
+                  <Input
+                    id="amenities"
+                    value={form.amenitiesText}
+                    onChange={(event) =>
+                      updateFormField('amenitiesText', event.target.value)
+                    }
+                    placeholder="WiFi, Water, Air conditioning"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Separate amenities with commas.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="policies"
+                    className="font-semibold text-slate-900"
+                  >
+                    Policies JSON
+                  </Label>
+                  <Textarea
+                    id="policies"
+                    value={form.policiesText}
+                    onChange={(event) =>
+                      updateFormField('policiesText', event.target.value)
+                    }
+                    className="min-h-28 font-mono text-xs"
+                    placeholder='{"refund": "Refund policy"}'
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="bankName"
+                    className="font-semibold text-slate-900"
+                  >
+                    Bank name
+                  </Label>
+                  <Input
+                    id="bankName"
+                    value={form.bankName}
+                    onChange={(event) =>
+                      updateFormField('bankName', event.target.value)
+                    }
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="bankAccountName"
+                    className="font-semibold text-slate-900"
+                  >
+                    Bank account name
+                  </Label>
+                  <Input
+                    id="bankAccountName"
+                    value={form.bankAccountName}
+                    onChange={(event) =>
+                      updateFormField('bankAccountName', event.target.value)
+                    }
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="bankNumber"
+                    className="font-semibold text-slate-900"
+                  >
+                    Bank number
+                  </Label>
+                  <Input
+                    id="bankNumber"
+                    value={form.bankNumber}
+                    onChange={(event) =>
+                      updateFormField('bankNumber', event.target.value)
+                    }
+                    maxLength={50}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="bankBranch"
+                    className="font-semibold text-slate-900"
+                  >
+                    Bank branch
+                  </Label>
+                  <Input
+                    id="bankBranch"
+                    value={form.bankBranch}
+                    onChange={(event) =>
+                      updateFormField('bankBranch', event.target.value)
+                    }
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label
+                    htmlFor="taxCode"
+                    className="font-semibold text-slate-900"
+                  >
+                    Tax code
+                  </Label>
+                  <Input
+                    id="taxCode"
+                    value={form.taxCode}
+                    onChange={(event) =>
+                      updateFormField('taxCode', event.target.value)
+                    }
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelEditing}
+                  disabled={isSaving}
+                >
+                  <X />
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={isSaving}
+                >
+                  <Save />
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
         <Card className="rounded-lg">
@@ -479,6 +1013,33 @@ function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(previewImage)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewImage(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl p-4 sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{previewImage?.title}</DialogTitle>
+            <DialogDescription>
+              Preview image uploaded for this partner profile.
+            </DialogDescription>
+          </DialogHeader>
+          {previewImage ? (
+            <div className="max-h-[75vh] overflow-hidden rounded-lg bg-slate-100">
+              <img
+                src={previewImage.src}
+                alt={previewImage.title}
+                className="mx-auto max-h-[75vh] w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
