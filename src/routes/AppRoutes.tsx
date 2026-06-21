@@ -7,14 +7,19 @@ import SchedulesPage from '@/pages/SchedulesPage'
 // import TripsPage from '@/pages/TripsPage'
 // import BookingsPage from '@/pages/BookingsPage'
 // import TicketsPage from '@/pages/TicketsPage'
-// import ProfilePage from '@/pages/ProfilePage'
-// import LoginPage from '@/pages/LoginPage'
+import ProfilePage from '@/pages/ProfilePage'
+import LoginPage from '@/pages/LoginPage'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    // element: <LoginPage />,
+    element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
   },
   {
     path: '/',
@@ -27,7 +32,7 @@ export const router = createBrowserRouter([
       // { path: 'trips', element: <TripsPage /> },
       // { path: 'bookings', element: <BookingsPage /> },
       // { path: 'tickets', element: <TicketsPage /> },
-      // { path: 'profile', element: <ProfilePage /> },
+      { path: 'profile', element: <ProfilePage /> },
     ],
   },
   {

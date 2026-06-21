@@ -1,4 +1,11 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import {
   LayoutDashboard,
   Bus,
@@ -23,6 +30,26 @@ const navItems = [
 ]
 
 function PartnerLayout() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const partnerToken = localStorage.getItem('partnerToken')
+
+  if (!partnerToken) {
+    const redirectTo = `${location.pathname}${location.search}`
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(redirectTo)}`}
+        replace
+      />
+    )
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('partnerToken')
+    localStorage.removeItem('partnerAccount')
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white">
@@ -67,7 +94,11 @@ function PartnerLayout() {
             </p>
           </div>
 
-          <button className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50">
+          <button
+            className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
+            onClick={handleLogout}
+            type="button"
+          >
             <LogOut size={16} />
             Logout
           </button>
