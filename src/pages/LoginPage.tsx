@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
   Building2,
@@ -68,6 +68,12 @@ function getApiErrorMessage(error: unknown) {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectPath = searchParams.get('redirect')
+  const safeRedirectPath =
+    redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//')
+      ? redirectPath
+      : '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -77,9 +83,9 @@ function LoginPage() {
 
   useEffect(() => {
     if (localStorage.getItem('partnerToken')) {
-      navigate('/')
+      navigate(safeRedirectPath)
     }
-  }, [navigate])
+  }, [navigate, safeRedirectPath])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -99,7 +105,7 @@ function LoginPage() {
       localStorage.setItem('partnerToken', token)
       localStorage.setItem('partnerAccount', JSON.stringify(account))
       localStorage.setItem('partnerRememberMe', String(rememberMe))
-      navigate('/')
+      navigate(safeRedirectPath)
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error))
     } finally {

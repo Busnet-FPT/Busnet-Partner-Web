@@ -1,4 +1,11 @@
-import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import {
   LayoutDashboard,
   Bus,
@@ -24,10 +31,17 @@ const navItems = [
 
 function PartnerLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const partnerToken = localStorage.getItem('partnerToken')
 
   if (!partnerToken) {
-    return <Navigate to="/login" replace />
+    const redirectTo = `${location.pathname}${location.search}`
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(redirectTo)}`}
+        replace
+      />
+    )
   }
 
   const handleLogout = () => {
