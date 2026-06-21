@@ -207,7 +207,7 @@ function LoginPage() {
                     <div className="flex items-center justify-between gap-3">
                       <Label htmlFor="password">Password</Label>
                       <Link
-                        to="/login"
+                        to="/forgot-password"
                         className="text-sm font-medium text-blue-700 hover:text-blue-800"
                       >
                         Forgot password?

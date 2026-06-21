@@ -9,12 +9,17 @@ import SchedulesPage from '@/pages/SchedulesPage'
 // import TicketsPage from '@/pages/TicketsPage'
 // import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
   },
   {
     path: '/',
