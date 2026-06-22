@@ -5,6 +5,8 @@ import BusesPage from '@/pages/BusesPage'
 import RoutesPage from '@/pages/RoutesPage'
 import SchedulesPage from '@/pages/SchedulesPage'
 import AddSchedulePage from '@/pages/AddSchedulePage'
+import ScheduleDetailPage from '@/pages/ScheduleDetailPage'
+import EditSchedulePage from '@/pages/EditSchedulePage'
 // import TripsPage from '@/pages/TripsPage'
 // import BookingsPage from '@/pages/BookingsPage'
 // import TicketsPage from '@/pages/TicketsPage'
@@ -31,6 +33,8 @@ export const router = createBrowserRouter([
       { path: 'routes', element: <RoutesPage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'schedules/add', element: <AddSchedulePage /> },
+      { path: 'schedules/:id', element: <ScheduleDetailPage /> },
+      { path: 'schedules/:id/edit', element: <EditSchedulePage /> },
       // { path: 'trips', element: <TripsPage /> },
       // { path: 'bookings', element: <BookingsPage /> },
       // { path: 'tickets', element: <TicketsPage /> },

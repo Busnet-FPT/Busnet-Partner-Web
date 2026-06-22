@@ -2,7 +2,22 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { PlusCircle, CalendarClock, Clock, MapPin, Bus } from 'lucide-react'
+import {
+  PlusCircle,
+  CalendarClock,
+  Clock,
+  MapPin,
+  Bus,
+  Trash2,
+  Eye,
+} from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import api from '@/services/api'
 
 interface Schedule {
@@ -35,6 +50,8 @@ function SchedulesPage() {
   const navigate = useNavigate()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<Schedule | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -49,6 +66,20 @@ function SchedulesPage() {
     }
     fetchSchedules()
   }, [])
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await api.delete(`/partner/schedules/${deleteTarget._id}`)
+      setSchedules((prev) => prev.filter((s) => s._id !== deleteTarget._id))
+      setDeleteTarget(null)
+    } catch {
+      // silently fail
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const formatPrice = (val: number) => val.toLocaleString('vi-VN')
 
@@ -105,7 +136,7 @@ function SchedulesPage() {
                         ? `${s.routeId.origin_provinceName} → ${s.routeId.destination_provinceName}`
                         : s.scheduleCode}
                     </span>
-                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                    <Badge className="border-blue-200 bg-blue-50 text-xs text-blue-700">
                       {s.recurrenceType}
                     </Badge>
                   </div>
@@ -131,16 +162,75 @@ function SchedulesPage() {
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-sm font-semibold text-slate-900">
-                  {formatPrice(s.basePrice)} <span className="text-xs font-normal text-slate-400">VND</span>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-slate-900">
+                    {formatPrice(s.basePrice)}{' '}
+                    <span className="text-xs font-normal text-slate-400">
+                      VND
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400">
+                    {s.scheduleCode}
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400">{s.scheduleCode}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-blue-600 hover:bg-blue-50"
+                  onClick={() => navigate(`/schedules/${s._id}`)}
+                >
+                  <Eye size={16} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => setDeleteTarget(s)}
+                >
+                  <Trash2 size={16} />
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Schedule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete schedule{' '}
+              <span className="font-semibold text-slate-900">
+                {deleteTarget?.scheduleCode}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
