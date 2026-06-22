@@ -4,6 +4,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import BusesPage from '@/pages/BusesPage'
 import RoutesPage from '@/pages/RoutesPage'
 import SchedulesPage from '@/pages/SchedulesPage'
+import AddSchedulePage from '@/pages/AddSchedulePage'
 // import TripsPage from '@/pages/TripsPage'
 // import BookingsPage from '@/pages/BookingsPage'
 // import TicketsPage from '@/pages/TicketsPage'
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { path: 'buses', element: <BusesPage /> },
       { path: 'routes', element: <RoutesPage /> },
       { path: 'schedules', element: <SchedulesPage /> },
+      { path: 'schedules/add', element: <AddSchedulePage /> },
       // { path: 'trips', element: <TripsPage /> },
       // { path: 'bookings', element: <BookingsPage /> },
       // { path: 'tickets', element: <TicketsPage /> },
