@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -18,6 +19,8 @@ import {
   LogOut,
 } from 'lucide-react'
 
+import api from '@/services/api'
+
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Buses', path: '/buses', icon: Bus },
@@ -33,8 +36,44 @@ function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const partnerToken = localStorage.getItem('partnerToken')
+  const [authStatus, setAuthStatus] = useState<
+    'checking' | 'authenticated' | 'unauthenticated'
+  >(partnerToken ? 'checking' : 'unauthenticated')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  if (!partnerToken) {
+  useEffect(() => {
+    const validateToken = async () => {
+      const token = localStorage.getItem('partnerToken')
+
+      if (!token) {
+        setAuthStatus('unauthenticated')
+        return
+      }
+
+      setAuthStatus('checking')
+
+      try {
+        await api.get('/partner/profile/me')
+        setAuthStatus('authenticated')
+      } catch {
+        localStorage.removeItem('partnerToken')
+        localStorage.removeItem('partnerAccount')
+        setAuthStatus('unauthenticated')
+      }
+    }
+
+    validateToken()
+  }, [location.pathname, location.search])
+
+  if (authStatus === 'checking') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-600">
+        Checking partner session...
+      </div>
+    )
+  }
+
+  if (authStatus === 'unauthenticated') {
     const redirectTo = `${location.pathname}${location.search}`
     return (
       <Navigate
@@ -44,10 +83,18 @@ function PartnerLayout() {
     )
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('partnerToken')
-    localStorage.removeItem('partnerAccount')
-    navigate('/login', { replace: true })
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await api.post('/partner/auth/logout')
+    } finally {
+      localStorage.removeItem('partnerToken')
+      localStorage.removeItem('partnerAccount')
+      localStorage.removeItem('partnerRememberMe')
+      setAuthStatus('unauthenticated')
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
@@ -97,10 +144,11 @@ function PartnerLayout() {
           <button
             className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
             onClick={handleLogout}
+            disabled={isLoggingOut}
             type="button"
           >
             <LogOut size={16} />
-            Logout
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
           </button>
         </header>
 
