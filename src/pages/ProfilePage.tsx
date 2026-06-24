@@ -34,9 +34,67 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import api from '@/services/api'
+
+const SEPAY_BANKS = [
+  { code: 'MB', name: 'MBBank' },
+  { code: 'VCB', name: 'Vietcombank' },
+  { code: 'CTG', name: 'VietinBank' },
+  { code: 'BID', name: 'BIDV' },
+  { code: 'TCB', name: 'Techcombank' },
+  { code: 'ACB', name: 'ACB' },
+  { code: 'TPB', name: 'TPBank' },
+  { code: 'VPB', name: 'VPBank' },
+]
+
+const AMENITY_OPTIONS = [
+  'Wifi',
+  'Bottled water',
+  'Air conditioning',
+  'Blanket',
+  'Reclining seat',
+  'Sleeper seat',
+  'USB charging port',
+  'Entertainment screen',
+  'Restroom',
+  'Wet towel',
+  'Door-to-door pickup',
+  'Luggage compartment',
+]
+
+const AMENITY_LABEL_MAP: Record<string, string> = {
+  'Nuoc uong': 'Bottled water',
+  'Nước uống': 'Bottled water',
+  'Dieu hoa': 'Air conditioning',
+  'Điều hòa': 'Air conditioning',
+  'Chan men': 'Blanket',
+  'Chăn mền': 'Blanket',
+  'Ghe nga': 'Reclining seat',
+  'Ghế ngả': 'Reclining seat',
+  'Giuong nam': 'Sleeper seat',
+  'Giường nằm': 'Sleeper seat',
+  'Cong sac USB': 'USB charging port',
+  'Cổng sạc USB': 'USB charging port',
+  'Man hinh giai tri': 'Entertainment screen',
+  'Màn hình giải trí': 'Entertainment screen',
+  'Nha ve sinh': 'Restroom',
+  'Nhà vệ sinh': 'Restroom',
+  'Khan lanh': 'Wet towel',
+  'Khăn lạnh': 'Wet towel',
+  'Don tra tan noi': 'Door-to-door pickup',
+  'Đón trả tận nơi': 'Door-to-door pickup',
+  'Khoang hanh ly': 'Luggage compartment',
+  'Khoang hành lý': 'Luggage compartment',
+}
 
 type PartnerProfile = {
   _id: string
@@ -89,11 +147,16 @@ type ProfileFormState = {
   operatorPhone: string
   description: string
   amenitiesText: string
-  policiesText: string
+  cancellationPolicy: string
+  refundPolicy: string
+  luggagePolicy: string
+  childrenPolicy: string
+  additionalPolicyNotes: string
   bankName: string
   bankAccountName: string
   bankNumber: string
   bankBranch: string
+  sepayVa: string
   taxCode: string
 }
 
@@ -158,9 +221,13 @@ function getApiStatus(error: unknown) {
 }
 
 function createProfileForm(profile: PartnerProfile): ProfileFormState {
-  const policiesText = Array.isArray(profile.policies)
-    ? JSON.stringify({ general: profile.policies.join('\n') }, null, 2)
-    : JSON.stringify(profile.policies || {}, null, 2)
+  const policies = !Array.isArray(profile.policies) && profile.policies
+    ? profile.policies
+    : {}
+  const amenitiesText =
+    profile.amenities
+      ?.map((item) => AMENITY_LABEL_MAP[item] || item)
+      .join(', ') || ''
 
   return {
     fullName: profile.accountInfo?.fullName || '',
@@ -168,12 +235,20 @@ function createProfileForm(profile: PartnerProfile): ProfileFormState {
     operatorName: profile.operatorName || '',
     operatorPhone: profile.operatorPhone || '',
     description: profile.description || '',
-    amenitiesText: profile.amenities?.join(', ') || '',
-    policiesText,
+    amenitiesText,
+    cancellationPolicy:
+      policies.cancellation || policies.cancel || policies.cancellationPolicy || '',
+    refundPolicy: policies.refund || policies.refundPolicy || '',
+    luggagePolicy: policies.luggage || policies.luggagePolicy || '',
+    childrenPolicy: policies.children || policies.childrenPolicy || '',
+    additionalPolicyNotes:
+      policies.additionalNotes ||
+      (Array.isArray(profile.policies) ? profile.policies.join('\n') : ''),
     bankName: profile.bankName || '',
     bankAccountName: profile.bankAccountName || '',
     bankNumber: profile.bankNumber || '',
     bankBranch: profile.bankBranch || '',
+    sepayVa: profile.sepayVa || '',
     taxCode: profile.taxCode || '',
   }
 }
@@ -217,6 +292,28 @@ function ProfilePage() {
     setForm((current) => (current ? { ...current, [field]: value } : current))
   }
 
+  const toggleAmenity = (amenity: string) => {
+    setForm((current) => {
+      if (!current) {
+        return current
+      }
+
+      const selectedAmenities = current.amenitiesText
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+      const isSelected = selectedAmenities.includes(amenity)
+      const nextAmenities = isSelected
+        ? selectedAmenities.filter((item) => item !== amenity)
+        : [...selectedAmenities, amenity]
+
+      return {
+        ...current,
+        amenitiesText: nextAmenities.join(', '),
+      }
+    })
+  }
+
   const startEditing = () => {
     if (!profile) {
       return
@@ -245,19 +342,12 @@ function ProfilePage() {
       return
     }
 
-    let policies: Record<string, unknown> = {}
-
-    try {
-      policies = form.policiesText.trim()
-        ? JSON.parse(form.policiesText)
-        : {}
-
-      if (!policies || typeof policies !== 'object' || Array.isArray(policies)) {
-        throw new Error()
-      }
-    } catch {
-      setErrorMessage('Policies must be a valid JSON object.')
-      return
+    const policies = {
+      cancellation: form.cancellationPolicy,
+      refund: form.refundPolicy,
+      luggage: form.luggagePolicy,
+      children: form.childrenPolicy,
+      additionalNotes: form.additionalPolicyNotes,
     }
 
     const amenities = form.amenitiesText
@@ -277,6 +367,7 @@ function ProfilePage() {
     formData.append('bankAccountName', form.bankAccountName)
     formData.append('bankNumber', form.bankNumber)
     formData.append('bankBranch', form.bankBranch)
+    formData.append('sepayVa', form.sepayVa)
     formData.append('taxCode', form.taxCode)
 
     if (profilePictureFile) {
@@ -422,6 +513,7 @@ function ProfilePage() {
         </div>
       ) : null}
 
+      {!isEditing ? (
       <Card className="rounded-lg py-0">
         <div className="h-40 bg-slate-900">
           {profile.coverImage ? (
@@ -526,6 +618,7 @@ function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
       {isEditing && form ? (
         <Card className="rounded-lg">
@@ -664,6 +757,22 @@ function ProfilePage() {
                     placeholder="09xxxxxxxx"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="taxCode"
+                    className="font-semibold text-slate-900"
+                  >
+                    Tax code
+                  </Label>
+                  <Input
+                    id="taxCode"
+                    value={form.taxCode}
+                    onChange={(event) =>
+                      updateFormField('taxCode', event.target.value)
+                    }
+                    maxLength={50}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -692,34 +801,132 @@ function ProfilePage() {
                   >
                     Amenities
                   </Label>
-                  <Input
+                  <div
                     id="amenities"
-                    value={form.amenitiesText}
-                    onChange={(event) =>
-                      updateFormField('amenitiesText', event.target.value)
-                    }
-                    placeholder="WiFi, Water, Air conditioning"
-                  />
+                    className="flex min-h-24 flex-wrap gap-2 rounded-md border border-input bg-transparent p-3 shadow-xs"
+                  >
+                    {AMENITY_OPTIONS.map((amenity) => {
+                      const isSelected = form.amenitiesText
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                        .includes(amenity)
+
+                      return (
+                        <Button
+                          key={amenity}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="sm"
+                          className={
+                            isSelected
+                              ? 'bg-blue-600 hover:bg-blue-700'
+                              : 'bg-white'
+                          }
+                          onClick={() => toggleAmenity(amenity)}
+                        >
+                          {amenity}
+                        </Button>
+                      )
+                    })}
+                  </div>
                   <p className="text-xs text-slate-500">
-                    Separate amenities with commas.
+                    Select all amenities available on this operator's buses.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="policies"
-                    className="font-semibold text-slate-900"
-                  >
-                    Policies JSON
+                  <Label className="font-semibold text-slate-900">
+                    Policies
                   </Label>
-                  <Textarea
-                    id="policies"
-                    value={form.policiesText}
-                    onChange={(event) =>
-                      updateFormField('policiesText', event.target.value)
-                    }
-                    className="min-h-28 font-mono text-xs"
-                    placeholder='{"refund": "Refund policy"}'
-                  />
+                  <div className="grid gap-3 rounded-md border border-input bg-transparent p-3 shadow-xs">
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="cancellationPolicy"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Cancellation policy
+                      </Label>
+                      <Input
+                        id="cancellationPolicy"
+                        value={form.cancellationPolicy}
+                        onChange={(event) =>
+                          updateFormField(
+                            'cancellationPolicy',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Free cancellation up to 24 hours before departure"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="refundPolicy"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Refund policy
+                      </Label>
+                      <Input
+                        id="refundPolicy"
+                        value={form.refundPolicy}
+                        onChange={(event) =>
+                          updateFormField('refundPolicy', event.target.value)
+                        }
+                        placeholder="80% refund for eligible cancellations"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="luggagePolicy"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Luggage policy
+                      </Label>
+                      <Input
+                        id="luggagePolicy"
+                        value={form.luggagePolicy}
+                        onChange={(event) =>
+                          updateFormField('luggagePolicy', event.target.value)
+                        }
+                        placeholder="One suitcase and one carry-on bag per passenger"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="childrenPolicy"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Children policy
+                      </Label>
+                      <Input
+                        id="childrenPolicy"
+                        value={form.childrenPolicy}
+                        onChange={(event) =>
+                          updateFormField('childrenPolicy', event.target.value)
+                        }
+                        placeholder="Children under 6 must travel with an adult"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="additionalPolicyNotes"
+                        className="text-xs font-semibold text-slate-600"
+                      >
+                        Additional notes
+                      </Label>
+                      <Textarea
+                        id="additionalPolicyNotes"
+                        value={form.additionalPolicyNotes}
+                        onChange={(event) =>
+                          updateFormField(
+                            'additionalPolicyNotes',
+                            event.target.value,
+                          )
+                        }
+                        className="min-h-20"
+                        placeholder="Other important policies for passengers"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -733,14 +940,27 @@ function ProfilePage() {
                   >
                     Bank name
                   </Label>
-                  <Input
-                    id="bankName"
+                  <Select
                     value={form.bankName}
-                    onChange={(event) =>
-                      updateFormField('bankName', event.target.value)
-                    }
-                    maxLength={100}
-                  />
+                    onValueChange={(value) => updateFormField('bankName', value)}
+                  >
+                    <SelectTrigger id="bankName" className="h-9 w-full">
+                      <SelectValue placeholder="Select a Sepay bank" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      className="max-h-56 overflow-y-auto"
+                    >
+                      {SEPAY_BANKS.map((bank) => (
+                        <SelectItem key={bank.code} value={bank.code}>
+                          {bank.code} - {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">
+                    Choose one of the banks supported by Sepay.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label
@@ -792,18 +1012,19 @@ function ProfilePage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label
-                    htmlFor="taxCode"
+                    htmlFor="sepayVa"
                     className="font-semibold text-slate-900"
                   >
-                    Tax code
+                    Sepay VA
                   </Label>
                   <Input
-                    id="taxCode"
-                    value={form.taxCode}
+                    id="sepayVa"
+                    value={form.sepayVa}
                     onChange={(event) =>
-                      updateFormField('taxCode', event.target.value)
+                      updateFormField('sepayVa', event.target.value)
                     }
-                    maxLength={50}
+                    placeholder="Enter Sepay virtual account"
+                    maxLength={100}
                   />
                 </div>
               </div>
@@ -832,6 +1053,7 @@ function ProfilePage() {
         </Card>
       ) : null}
 
+      {!isEditing ? (
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
         <Card className="rounded-lg">
           <CardHeader>
@@ -962,7 +1184,9 @@ function ProfilePage() {
           </Card>
         </div>
       </div>
+      ) : null}
 
+      {!isEditing ? (
       <Card className="rounded-lg">
         <CardHeader>
           <CardTitle>Services And Policies</CardTitle>
@@ -1013,6 +1237,7 @@ function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
       <Dialog
         open={Boolean(previewImage)}
