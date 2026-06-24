@@ -14,6 +14,7 @@ import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import RouteDetailsPage from '@/pages/RouteDetailsPage'
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'buses', element: <BusesPage /> },
       { path: 'routes', element: <RoutesPage /> },
+      { path: 'routes/:id', element: <RouteDetailsPage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'schedules/add', element: <AddSchedulePage /> },
       { path: 'schedules/:id', element: <ScheduleDetailPage /> },
