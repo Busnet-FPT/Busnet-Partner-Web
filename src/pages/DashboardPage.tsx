@@ -431,8 +431,8 @@ function DashboardPage() {
                       border: '1px solid #e2e8f0',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
-                    formatter={(value: number) => [
-                      `${formatFullCurrency(value)} VND`,
+                    formatter={(value: any) => [
+                      `${formatFullCurrency(Number(value))} VND`,
                       'Revenue',
                     ]}
                   />
@@ -466,7 +466,7 @@ function DashboardPage() {
                       border: '1px solid #e2e8f0',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
-                    formatter={(value: number) => [value, 'Bookings']}
+                    formatter={(value: any) => [value, 'Bookings']}
                   />
                   <Bar
                     dataKey="bookings"
@@ -521,9 +521,9 @@ function DashboardPage() {
                         borderRadius: 8,
                         border: '1px solid #e2e8f0',
                       }}
-                      formatter={(value: number, name: string) => [
+                      formatter={(value: any, name: any) => [
                         value,
-                        STATUS_LABELS[name] || name,
+                        STATUS_LABELS[name as string] || name,
                       ]}
                     />
                   </PieChart>
