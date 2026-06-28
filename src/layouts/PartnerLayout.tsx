@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -16,9 +16,20 @@ import {
   ClipboardList,
   Ticket,
   User,
+  ChevronDown,
+  Edit,
   LogOut,
+  Settings,
 } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import api from '@/services/api'
 
 const navItems = [
@@ -32,6 +43,11 @@ const navItems = [
   { label: 'Profile', path: '/profile', icon: User },
 ]
 
+export type PartnerLayoutContext = {
+  setProfileEditDisabled: (disabled: boolean) => void
+  setProfileEditHandler: (handler: (() => void) | null) => void
+}
+
 function PartnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -40,6 +56,21 @@ function PartnerLayout() {
     'checking' | 'authenticated' | 'unauthenticated'
   >(partnerToken ? 'checking' : 'unauthenticated')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [profileEditHandler, setProfileEditHandlerState] = useState<
+    (() => void) | null
+  >(null)
+  const [isProfileEditDisabled, setIsProfileEditDisabled] = useState(true)
+
+  const setProfileEditDisabled = useCallback((disabled: boolean) => {
+    setIsProfileEditDisabled(disabled)
+  }, [])
+
+  const setProfileEditHandler = useCallback(
+    (handler: (() => void) | null) => {
+      setProfileEditHandlerState(() => handler)
+    },
+    [],
+  )
 
   useEffect(() => {
     const validateToken = async () => {
@@ -97,6 +128,8 @@ function PartnerLayout() {
     }
   }
 
+  const isProfilePage = location.pathname === '/profile'
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white">
@@ -141,19 +174,49 @@ function PartnerLayout() {
             </p>
           </div>
 
-          <button
-            className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            type="button"
-          >
-            <LogOut size={16} />
-            {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </button>
+          {isProfilePage ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Settings />
+                  Settings
+                  <ChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  disabled={isProfileEditDisabled || !profileEditHandler}
+                  onSelect={() => profileEditHandler?.()}
+                >
+                  <Edit />
+                  Update Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  disabled={isLoggingOut}
+                  variant="destructive"
+                  onSelect={handleLogout}
+                >
+                  <LogOut />
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </header>
 
         <main className="p-6">
-          <Outlet />
+          <Outlet
+            context={{
+              setProfileEditDisabled,
+              setProfileEditHandler,
+            }}
+          />
         </main>
       </div>
     </div>
