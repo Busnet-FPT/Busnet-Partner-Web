@@ -10,6 +10,7 @@ import SchedulesPage from '@/pages/SchedulesPage'
 import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ChangePasswordPage from '@/pages/ChangePasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       // { path: 'bookings', element: <BookingsPage /> },
       // { path: 'tickets', element: <TicketsPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'change-password', element: <ChangePasswordPage /> },
     ],
   },
   {

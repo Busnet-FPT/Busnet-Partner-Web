@@ -18,6 +18,7 @@ import {
   User,
   ChevronDown,
   Edit,
+  KeyRound,
   LogOut,
   Settings,
 } from 'lucide-react'
@@ -128,8 +129,6 @@ function PartnerLayout() {
     }
   }
 
-  const isProfilePage = location.pathname === '/profile'
-
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white">
@@ -174,40 +173,49 @@ function PartnerLayout() {
             </p>
           </div>
 
-          {isProfilePage ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Settings />
-                  Settings
-                  <ChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  disabled={isProfileEditDisabled || !profileEditHandler}
-                  onSelect={() => profileEditHandler?.()}
-                >
-                  <Edit />
-                  Update Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  disabled={isLoggingOut}
-                  variant="destructive"
-                  onSelect={handleLogout}
-                >
-                  <LogOut />
-                  {isLoggingOut ? 'Logging out...' : 'Logout'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" className="bg-blue-600 hover:bg-blue-700">
+                <Settings />
+                Settings
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={location.pathname === '/profile' && isProfileEditDisabled}
+                onSelect={() => {
+                  if (location.pathname === '/profile') {
+                    profileEditHandler?.()
+                    return
+                  }
+
+                  navigate('/profile')
+                }}
+              >
+                <Edit />
+                Update Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onSelect={() => navigate('/change-password')}
+              >
+                <KeyRound />
+                Change Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={isLoggingOut}
+                variant="destructive"
+                onSelect={handleLogout}
+              >
+                <LogOut />
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <main className="p-6">
