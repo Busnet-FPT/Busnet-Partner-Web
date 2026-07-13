@@ -21,6 +21,7 @@ import {
   KeyRound,
   LogOut,
   Settings,
+  BookOpen,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -41,12 +42,18 @@ const navItems = [
   { label: 'Trips', path: '/trips', icon: MapPinned },
   { label: 'Bookings', path: '/bookings', icon: ClipboardList },
   { label: 'Tickets', path: '/tickets', icon: Ticket },
+  { label: 'Blogs', path: '/blogs', icon: BookOpen },
   { label: 'Profile', path: '/profile', icon: User },
 ]
 
 export type PartnerLayoutContext = {
   setProfileEditDisabled: (disabled: boolean) => void
   setProfileEditHandler: (handler: (() => void) | null) => void
+}
+
+type PartnerInfo = {
+  operatorName?: string
+  profilePicture?: string
 }
 
 function PartnerLayout() {
@@ -61,6 +68,7 @@ function PartnerLayout() {
     (() => void) | null
   >(null)
   const [isProfileEditDisabled, setIsProfileEditDisabled] = useState(true)
+  const [partnerInfo, setPartnerInfo] = useState<PartnerInfo | null>(null)
 
   const setProfileEditDisabled = useCallback((disabled: boolean) => {
     setIsProfileEditDisabled(disabled)
@@ -85,7 +93,8 @@ function PartnerLayout() {
       setAuthStatus('checking')
 
       try {
-        await api.get('/partner/profile/me')
+        const res = await api.get('/partner/profile/me')
+        setPartnerInfo(res.data.data)
         setAuthStatus('authenticated')
       } catch {
         localStorage.removeItem('partnerToken')
@@ -131,37 +140,77 @@ function PartnerLayout() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white">
-        <div className="flex h-16 items-center border-b px-6">
-          <Link to="/" className="text-xl font-bold text-blue-600">
-            BusNet Partner
+      <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white flex flex-col justify-between">
+        <div className="flex flex-col flex-1 min-h-0">
+          <Link
+            to="/"
+            className="flex items-center gap-3 border-b px-6 py-5 hover:opacity-90 transition duration-150"
+          >
+            <img
+              src="/logo.jpg"
+              alt="BusNet logo"
+              className="h-9 w-9 rounded-lg object-cover border border-slate-200 shadow-2xs"
+              onError={(e) => {
+                e.currentTarget.src =
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+              }}
+            />
+            <span className="text-lg font-bold tracking-tight text-slate-900">
+              BusNet-Partner
+            </span>
           </Link>
+
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/'}
+                  className={({ isActive }) =>
+                    [
+                      'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition',
+                      isActive
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    ].join(' ')
+                  }
+                >
+                  <Icon size={18} />
+                  {item.label}
+                </NavLink>
+              )
+            })}
+          </nav>
         </div>
 
-        <nav className="space-y-1 p-4">
-          {navItems.map((item) => {
-            const Icon = item.icon
-
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/'}
-                className={({ isActive }) =>
-                  [
-                    'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition',
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-                  ].join(' ')
-                }
-              >
-                <Icon size={18} />
-                {item.label}
-              </NavLink>
-            )
-          })}
-        </nav>
+        {partnerInfo && (
+          <div className="flex items-center gap-3 border-t px-6 py-4 bg-slate-50/50">
+            <img
+              src={
+                partnerInfo.profilePicture
+                  ? partnerInfo.profilePicture.startsWith('http')
+                    ? partnerInfo.profilePicture
+                    : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${partnerInfo.profilePicture}`
+                  : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+              }
+              alt={partnerInfo.operatorName}
+              className="h-10 w-10 rounded-full object-cover border border-slate-200 shadow-2xs"
+              onError={(e) => {
+                e.currentTarget.src =
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900 leading-snug">
+                {partnerInfo.operatorName}
+              </p>
+              <p className="text-xs text-slate-500 font-medium">Partner Operator</p>
+            </div>
+          </div>
+        )}
       </aside>
 
       <div className="ml-64 min-h-screen">
