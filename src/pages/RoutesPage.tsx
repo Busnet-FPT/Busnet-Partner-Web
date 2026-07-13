@@ -9,6 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -18,7 +26,7 @@ import {
   MapPin,
   Clock,
   Eye,
-  Trash2,
+  Pencil,
 } from 'lucide-react'
 
 interface RouteItem {
@@ -50,21 +58,41 @@ function RoutesPage() {
   const [conflictMessage, setConflictMessage] =
     useState('')
 
-  useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
-        const res = await api.get('/partner/routes')
+  // Route pending confirmation before navigating to its edit page,
+  // shown only when the route is currently active (isActive === true).
+  const [editTarget, setEditTarget] = useState<RouteItem | null>(null)
+  const [disablingForEdit, setDisablingForEdit] = useState(false)
 
-        setRoutes(res.data?.data || [])
-      } catch (error) {
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
+  const [page, setPage] = useState(1)
+  const [limit] = useState(5)
+
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalRoutes, setTotalRoutes] = useState(0)
+
+  const fetchRoutes = async () => {
+    setLoading(true)
+
+    try {
+      const res = await api.get('/partner/routes', {
+        params: {
+          page,
+          limit,
+        },
+      })
+
+      setRoutes(res.data.data)
+      setTotalPages(res.data.pagination.totalPages)
+      setTotalRoutes(res.data.pagination.total)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchRoutes()
-  }, [])
+  }, [page])
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
@@ -89,20 +117,12 @@ function RoutesPage() {
     setUpdatingStatus(true)
 
     try {
-      const res = await api.patch(
+      await api.patch(
         `/partner/routes/${statusTarget._id}/status`,
         { isActive: newStatus }
       )
 
-      const updatedRoute = res.data.data
-
-      setRoutes((prev) =>
-        prev.map((route) =>
-          route._id === statusTarget._id
-            ? updatedRoute
-            : route
-        )
-      )
+      await fetchRoutes()
 
       setStatusTarget(null)
     } catch (error: any) {
@@ -121,6 +141,55 @@ function RoutesPage() {
       setUpdatingStatus(false)
     }
   }
+
+  // Clicking the pencil on an active route asks for confirmation first
+  // (editing a live route can affect existing trips). Disabled routes
+  // go straight to the edit page.
+  const handleEditClick = (route: RouteItem) => {
+    if (route.isActive) {
+      setEditTarget(route)
+    } else {
+      navigate(`/routes/${route._id}/update`)
+    }
+  }
+
+  const confirmEdit = async () => {
+    if (!editTarget) return
+
+    setDisablingForEdit(true)
+
+    try {
+      await api.patch(
+        `/partner/routes/${editTarget._id}/status`,
+        { isActive: false }
+      )
+
+      await fetchRoutes()
+
+      navigate(`/routes/${editTarget._id}/update`)
+      setEditTarget(null)
+    } catch (error: any) {
+      console.error(error)
+
+      if (error.response?.status === 409) {
+        setConflictMessage(
+          error.response?.data?.message ||
+          'This route has future trips and cannot be disabled.'
+        )
+
+        setTripConflictOpen(true)
+      }
+
+      setEditTarget(null)
+    } finally {
+      setDisablingForEdit(false)
+    }
+  }
+
+  const pageNumbers = Array.from(
+    { length: totalPages },
+    (_, i) => i + 1
+  )
 
   return (
     <div>
@@ -236,16 +305,80 @@ function RoutesPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-red-500 hover:bg-red-50"
+                  className="text-black-500 hover:bg-red-50"
+                  onClick={() => handleEditClick(route)}
                 >
-                  <Trash2 size={16} />
+                  <Pencil size={16} />
                 </Button>
 
               </div>
             </div>
           ))}
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Total {totalRoutes} routes
+            </p>
+
+            <Pagination>
+              <PaginationContent>
+
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+
+                      if (page > 1) {
+                        setPage(page - 1)
+                      }
+                    }}
+                    className={
+                      page === 1
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  />
+                </PaginationItem>
+
+                {pageNumbers.map((number) => (
+                  <PaginationItem key={number}>
+                    <PaginationLink
+                      href="#"
+                      isActive={page === number}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setPage(number)
+                      }}
+                    >
+                      {number}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+
+                      if (page < totalPages) {
+                        setPage(page + 1)
+                      }
+                    }}
+                    className={
+                      page === totalPages
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  />
+                </PaginationItem>
+
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       )}
+
       <Dialog
         open={Boolean(statusTarget)}
         onOpenChange={(open) => {
@@ -323,7 +456,50 @@ function RoutesPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
+      <Dialog
+        open={Boolean(editTarget)}
+        onOpenChange={(open) => {
+          if (!open && !disablingForEdit) setEditTarget(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disable Route to Edit</DialogTitle>
+
+            <DialogDescription>
+              <span className="font-semibold text-slate-900">
+                {editTarget?.routeName}
+              </span>{' '}
+              is currently <span className="font-semibold">active</span>.
+              Active routes must be disabled before they can be edited, so
+              no trips are affected mid-edit. Disable this route and
+              continue to the edit page?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+              disabled={disablingForEdit}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmEdit}
+              disabled={disablingForEdit}
+            >
+              {disablingForEdit
+                ? 'Disabling...'
+                : 'Disable & Continue to Edit'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 

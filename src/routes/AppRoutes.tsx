@@ -15,6 +15,8 @@ import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import RouteDetailsPage from '@/pages/RouteDetailsPage'
+import AddRoutePage from '@/pages/AddRoutePage'
+import UpdateRoutePage from '@/pages/UpdateRoutePage'
 
 export const router = createBrowserRouter([
   {
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
       { path: 'buses', element: <BusesPage /> },
       { path: 'routes', element: <RoutesPage /> },
       { path: 'routes/:id', element: <RouteDetailsPage /> },
+      { path: 'routes/add', element: <AddRoutePage /> },
+      { path: 'routes/:id/update', element: <UpdateRoutePage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'schedules/add', element: <AddSchedulePage /> },
       { path: 'schedules/:id', element: <ScheduleDetailPage /> },

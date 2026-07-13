@@ -229,43 +229,6 @@ function RouteDetailsPage() {
         </div>
       </div>
 
-      {/* Coordinates */}
-      <div className="rounded-xl border bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold">
-          Coordinates
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium mb-2">Origin</h3>
-            <p>
-              Lat:{' '}
-              {route.origin_representativeLat ?? 'N/A'}
-            </p>
-            <p>
-              Lng:{' '}
-              {route.origin_representativeLng ?? 'N/A'}
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-medium mb-2">
-              Destination
-            </h3>
-            <p>
-              Lat:{' '}
-              {route.destination_representativeLat ??
-                'N/A'}
-            </p>
-            <p>
-              Lng:{' '}
-              {route.destination_representativeLng ??
-                'N/A'}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Metadata */}
       <div className="rounded-xl border bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">
