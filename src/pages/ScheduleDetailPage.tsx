@@ -172,6 +172,14 @@ function ScheduleDetailPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
+            className="text-emerald-700 hover:bg-emerald-50"
+            onClick={() => navigate(`/schedules/${id}/ticket-prices`)}
+          >
+            <Banknote size={16} />
+            Set Ticket Price
+          </Button>
+          <Button
+            variant="outline"
             className="text-blue-600 hover:bg-blue-50"
             onClick={() => navigate(`/schedules/${id}/edit`)}
           >
