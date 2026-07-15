@@ -9,7 +9,8 @@ import ScheduleDetailPage from '@/pages/ScheduleDetailPage'
 import EditSchedulePage from '@/pages/EditSchedulePage'
 import SetTicketPricePage from '@/pages/SetTicketPricePage'
 // import TripsPage from '@/pages/TripsPage'
-// import BookingsPage from '@/pages/BookingsPage'
+import BookingsPage from '@/pages/BookingsPage'
+import BookingDetailPage from '@/pages/BookingDetailPage'
 import TicketsPage from '@/pages/TicketsPage'
 import TicketDetailPage from '@/pages/TicketDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
@@ -47,7 +48,8 @@ export const router = createBrowserRouter([
         element: <SetTicketPricePage />,
       },
       // { path: 'trips', element: <TripsPage /> },
-      // { path: 'bookings', element: <BookingsPage /> },
+      { path: 'bookings', element: <BookingsPage /> },
+      { path: 'bookings/:bookingId', element: <BookingDetailPage /> },
       { path: 'tickets', element: <TicketsPage /> },
       { path: 'tickets/:ticketId', element: <TicketDetailPage /> },
       { path: 'blogs', element: <BlogsPage /> },
