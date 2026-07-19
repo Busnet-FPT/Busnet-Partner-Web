@@ -16,6 +16,7 @@ import TicketDetailPage from '@/pages/TicketDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ChangePasswordPage from '@/pages/ChangePasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import RouteDetailsPage from '@/pages/RouteDetailsPage'
 import BlogsPage from '@/pages/blog-management/BlogsPage'
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { path: 'blogs/add', element: <AddBlogPage /> },
       { path: 'blogs/:id/edit', element: <EditBlogPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'change-password', element: <ChangePasswordPage /> },
     ],
   },
   {

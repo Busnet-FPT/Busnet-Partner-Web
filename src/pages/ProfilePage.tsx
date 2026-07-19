@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import {
   BadgeCheck,
   Banknote,
   Building2,
-  Edit,
   FileText,
   Mail,
   Phone,
@@ -43,13 +42,14 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import type { PartnerLayoutContext } from '@/layouts/PartnerLayout'
 import api from '@/services/api'
 
 const SEPAY_BANKS = [
   { code: 'MB', name: 'MBBank' },
   { code: 'VCB', name: 'Vietcombank' },
   { code: 'CTG', name: 'VietinBank' },
-  { code: 'BID', name: 'BIDV' },
+  { code: 'BIDV', name: 'BIDV' },
   { code: 'TCB', name: 'Techcombank' },
   { code: 'ACB', name: 'ACB' },
   { code: 'TPB', name: 'TPBank' },
@@ -272,6 +272,8 @@ function DetailItem({
 
 function ProfilePage() {
   const navigate = useNavigate()
+  const { setProfileEditDisabled, setProfileEditHandler } =
+    useOutletContext<PartnerLayoutContext>()
   const [profile, setProfile] = useState<PartnerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -314,7 +316,7 @@ function ProfilePage() {
     })
   }
 
-  const startEditing = () => {
+  const startEditing = useCallback(() => {
     if (!profile) {
       return
     }
@@ -325,7 +327,7 @@ function ProfilePage() {
     setSuccessMessage('')
     setErrorMessage('')
     setIsEditing(true)
-  }
+  }, [profile])
 
   const cancelEditing = () => {
     setIsEditing(false)
@@ -441,6 +443,22 @@ function ProfilePage() {
     loadProfile()
   }, [navigate])
 
+  useEffect(() => {
+    setProfileEditDisabled(!profile || isEditing)
+    setProfileEditHandler(startEditing)
+
+    return () => {
+      setProfileEditDisabled(true)
+      setProfileEditHandler(null)
+    }
+  }, [
+    isEditing,
+    profile,
+    setProfileEditDisabled,
+    setProfileEditHandler,
+    startEditing,
+  ])
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -489,16 +507,6 @@ function ProfilePage() {
           <h2 className="text-2xl font-bold">Profile</h2>
           <p className="text-slate-500">View your partner account details.</p>
         </div>
-
-        <Button
-          type="button"
-          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
-          onClick={startEditing}
-          disabled={isEditing}
-        >
-          <Edit />
-          Update Profile
-        </Button>
       </div>
 
       {successMessage ? (
