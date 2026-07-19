@@ -8,7 +8,9 @@ import {
   Trash2,
   Eye,
   Pencil,
-  Armchair
+  Armchair,
+  Crown,
+  AlertTriangle
 } from 'lucide-react'
 import {
   Dialog,
@@ -23,6 +25,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import api from '@/services/api'
 
@@ -60,14 +70,45 @@ function BusesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Bus | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  const [inputKeyword, setInputKeyword] = useState("")
+  const [keyword, setKeyword] = useState("")
+
+  const [status, setStatus] = useState("all")
+
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalBuses, setTotalBuses] = useState(0)
+
+  const [busLimit, setBusLimit] = useState({
+    current: 0,
+    max: 0,
+    canCreate: true,
+  })
   useEffect(() => {
     const fetchBuses = async () => {
       try {
         setLoading(true)
+        const params: any = {
+          page
+        }
 
-        const res = await api.get('/partner/buses')
+        if (keyword) params.keyword = keyword
+        if (status !== "all") params.status = status
+
+        const res = await api.get('/partner/buses', {
+          params
+        })
 
         setBuses(res.data.data || [])
+
+        setBusLimit({
+          current: res.data.usage.currentBuses,
+          max: res.data.usage.maxBuses,
+          canCreate: res.data.usage.canCreate,
+        })
+
+        setTotalPages(res.data.pagination.totalPages)
+        setTotalBuses(res.data.pagination.total)
       } catch (err) {
         console.error(err)
       } finally {
@@ -76,7 +117,7 @@ function BusesPage() {
     }
 
     fetchBuses()
-  }, [])
+  }, [page, keyword, status])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -127,10 +168,96 @@ function BusesPage() {
 
         <Button
           className="bg-blue-600 text-white hover:bg-blue-700"
+          disabled={!busLimit?.canCreate}
           onClick={() => navigate('/buses/add')}
         >
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Bus
+        </Button>
+      </div>
+
+      {busLimit.max > 0 && (
+        <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+
+              <div>
+                <p className="font-semibold text-yellow-900">
+                  Bus Usage
+                </p>
+
+                <p className="text-sm text-yellow-700">
+                  You are using{" "}
+                  <span className="font-bold">
+                    {busLimit.current}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-bold">
+                    {busLimit.max}
+                  </span>{" "}
+                  buses allowed by your subscription.
+                </p>
+
+                {!busLimit.canCreate && (
+                  <p className="mt-1 text-sm font-medium text-red-600">
+                    You have reached your bus limit. Upgrade your subscription to create more buses.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Button
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              Upgrade
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="mb-6 flex gap-3">
+        <Input
+          value={inputKeyword}
+          onChange={(e) =>
+            setInputKeyword(e.target.value)
+          }
+        />
+
+        <Select
+          value={status}
+          onValueChange={setStatus}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">
+              All
+            </SelectItem>
+
+            <SelectItem value="ACTIVE">
+              Active
+            </SelectItem>
+
+            <SelectItem value="INACTIVE">
+              Inactive
+            </SelectItem>
+
+             <SelectItem value="MAINTENANCE">
+              Maintenance
+            </SelectItem>
+
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={() => {
+            setPage(1)
+            setKeyword(inputKeyword)
+          }}
+        >
+          Search
         </Button>
       </div>
 
@@ -160,6 +287,7 @@ function BusesPage() {
             Add Bus
           </Button>
         </div>
+
       ) : (
         <div className="space-y-4">
           {buses.map((bus) => (
@@ -365,6 +493,44 @@ function BusesPage() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      <p className="text-sm text-slate-500">
+        {totalBuses} bus{totalBuses !== 1 ? "es" : ""} found
+      </p>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex justify-center gap-2">
+          <Button
+            variant="outline"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Previous
+          </Button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+            (pageNumber) => (
+              <Button
+                key={pageNumber}
+                variant={
+                  page === pageNumber ? "default" : "outline"
+                }
+                onClick={() => setPage(pageNumber)}
+              >
+                {pageNumber}
+              </Button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
