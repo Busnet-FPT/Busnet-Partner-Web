@@ -19,7 +19,14 @@ import {
 } from "@/components/ui/pagination"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import {
   PlusCircle,
   Route,
@@ -27,6 +34,8 @@ import {
   Clock,
   Eye,
   Pencil,
+  AlertTriangle,
+  Crown
 } from 'lucide-react'
 
 interface RouteItem {
@@ -64,23 +73,45 @@ function RoutesPage() {
   const [disablingForEdit, setDisablingForEdit] = useState(false)
 
   const [page, setPage] = useState(1)
-  const [limit] = useState(5)
 
   const [totalPages, setTotalPages] = useState(1)
   const [totalRoutes, setTotalRoutes] = useState(0)
+
+
+  const [inputKeyword, setInputKeyword] = useState("")
+  const [keyword, setKeyword] = useState("")
+  const [status, setStatus] = useState("all")
+
+  const [routeLimit, setRouteLimit] = useState({
+    current: 0,
+    max: 0,
+    canCreate: true,
+  })
+
 
   const fetchRoutes = async () => {
     setLoading(true)
 
     try {
-      const res = await api.get('/partner/routes', {
-        params: {
-          page,
-          limit,
-        },
+      const params: any = {
+        page,
+      }
+
+      if (keyword) params.keyword = keyword
+      if (status !== "all") params.isActive = status
+
+      const res = await api.get("/partner/routes", {
+        params,
       })
 
       setRoutes(res.data.data)
+
+      setRouteLimit({
+        current: res.data.usage.currentRoutes,
+        max: res.data.usage.maxRoutes,
+        canCreate: res.data.usage.canCreate,
+      })
+
       setTotalPages(res.data.pagination.totalPages)
       setTotalRoutes(res.data.pagination.total)
     } catch (error) {
@@ -92,7 +123,7 @@ function RoutesPage() {
 
   useEffect(() => {
     fetchRoutes()
-  }, [page])
+  }, [keyword, status, page])
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
@@ -203,10 +234,91 @@ function RoutesPage() {
 
         <Button
           className="bg-blue-600 text-white hover:bg-blue-700"
+          disabled={!routeLimit.canCreate}
           onClick={() => navigate('/routes/add')}
         >
           <PlusCircle size={16} />
           Add Route
+        </Button>
+      </div>
+      {routeLimit.max > 0 && (
+        <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+
+              <div>
+                <p className="font-semibold text-yellow-900">
+                  Route Usage
+                </p>
+
+                <p className="text-sm text-yellow-700">
+                  You are using{" "}
+                  <span className="font-bold">
+                    {routeLimit.current}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-bold">
+                    {routeLimit.max}
+                  </span>{" "}
+                  routes allowed by your subscription.
+                </p>
+
+                {!routeLimit.canCreate && (
+                  <p className="mt-1 text-sm font-medium text-red-600">
+                    You have reached your route limit. Upgrade your subscription to create more routes.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Button
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              Upgrade
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-6 flex gap-3">
+        <Input
+          value={inputKeyword}
+          onChange={(e) =>
+            setInputKeyword(e.target.value)
+          }
+        />
+
+        <Select
+          value={status}
+          onValueChange={setStatus}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">
+              All
+            </SelectItem>
+
+            <SelectItem value="true">
+              Active
+            </SelectItem>
+
+            <SelectItem value="false">
+              Inactive
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={() => {
+            setPage(1)
+            setKeyword(inputKeyword)
+          }}
+        >
+          Search
         </Button>
       </div>
 
