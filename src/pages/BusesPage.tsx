@@ -10,7 +10,8 @@ import {
   Pencil,
   Armchair,
   Crown,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react'
 import {
   Dialog,
@@ -73,7 +74,14 @@ function BusesPage() {
   const [inputKeyword, setInputKeyword] = useState("")
   const [keyword, setKeyword] = useState("")
 
+  const [inputStatus, setInputStatus] = useState("all")
   const [status, setStatus] = useState("all")
+
+  const [inputBusType, setInputBusType] = useState("all")
+  const [busType, setBusType] = useState("all")
+
+  const [inputCapacity, setInputCapacity] = useState("all")
+  const [capacity, setCapacity] = useState("all")
 
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -93,7 +101,28 @@ function BusesPage() {
         }
 
         if (keyword) params.keyword = keyword
+
         if (status !== "all") params.status = status
+
+        if (busType !== "all") {
+          params.busType = busType
+        }
+
+        switch (capacity) {
+          case "small":
+            params.minSeats = 1
+            params.maxSeats = 20
+            break
+
+          case "medium":
+            params.minSeats = 21
+            params.maxSeats = 40
+            break
+
+          case "large":
+            params.minSeats = 41
+            break
+        }
 
         const res = await api.get('/partner/buses', {
           params
@@ -117,7 +146,13 @@ function BusesPage() {
     }
 
     fetchBuses()
-  }, [page, keyword, status])
+  }, [
+    page,
+    keyword,
+    status,
+    busType,
+    capacity
+  ])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -225,8 +260,8 @@ function BusesPage() {
         />
 
         <Select
-          value={status}
-          onValueChange={setStatus}
+          value={inputStatus}
+          onValueChange={setInputStatus}
         >
           <SelectTrigger className="w-40">
             <SelectValue />
@@ -245,20 +280,101 @@ function BusesPage() {
               Inactive
             </SelectItem>
 
-             <SelectItem value="MAINTENANCE">
+            <SelectItem value="MAINTENANCE">
               Maintenance
             </SelectItem>
 
           </SelectContent>
         </Select>
+
+        <Select
+          value={inputBusType}
+          onValueChange={setInputBusType}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Bus Type" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">
+              All Types
+            </SelectItem>
+
+            <SelectItem value="Seater">
+              Seater
+            </SelectItem>
+
+            <SelectItem value="Sleeper">
+              Sleeper
+            </SelectItem>
+
+            <SelectItem value="Limousine">
+              Limousine
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={inputCapacity}
+          onValueChange={setInputCapacity}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Capacity" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">
+              All Capacities
+            </SelectItem>
+
+            <SelectItem value="small">
+              Small (1–20 Seats)
+            </SelectItem>
+
+            <SelectItem value="medium">
+              Medium (21–40 Seats)
+            </SelectItem>
+
+            <SelectItem value="large">
+              Large (41+ Seats)
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button
           onClick={() => {
             setPage(1)
+
             setKeyword(inputKeyword)
+            setStatus(inputStatus)
+            setBusType(inputBusType)
+            setCapacity(inputCapacity)
           }}
         >
           Search
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setInputKeyword("")
+            setKeyword("")
+
+            setInputStatus("all")
+            setStatus("all")
+
+            setInputBusType("all")
+            setBusType("all")
+
+            setInputCapacity("all")
+            setCapacity("all")
+
+            setPage(1)
+          }}
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Reset
+        </Button>
+
       </div>
 
       {/* Loading */}
@@ -441,6 +557,7 @@ function BusesPage() {
                 <Button
                   variant="outline"
                   size="icon"
+                  disabled={bus.isInUse}
                   className="text-red-600 hover:bg-red-50"
                   onClick={() => setDeleteTarget(bus)}
                 >
@@ -493,7 +610,7 @@ function BusesPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <p className="text-sm text-slate-500">
         {totalBuses} bus{totalBuses !== 1 ? "es" : ""} found
       </p>
