@@ -14,6 +14,10 @@ import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import BusDetailsPage from '@/pages/BusDetailsPage'
+import AddBusPage from '@/pages/AddBusPage'
+import UpdateBusPage from '@/pages/UpdateBusPage'
+import ConfigureSeatPage from '@/pages/ConfigureSeatPage'
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +34,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'buses', element: <BusesPage /> },
+      { path: 'buses/:id', element: <BusDetailsPage /> },
+      { path: 'buses/add', element: <AddBusPage /> },
+      { path: 'buses/:id/edit', element: <UpdateBusPage /> },
+      { path: 'buses/:id/layout', element: <ConfigureSeatPage /> },
       { path: 'routes', element: <RoutesPage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'schedules/add', element: <AddSchedulePage /> },
