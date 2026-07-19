@@ -287,7 +287,16 @@ function ChangePasswordPage() {
                 </div>
               ) : null}
 
-              <div className="flex justify-end">
+              <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  disabled={isSubmitting}
+                  onClick={() => navigate('/profile')}
+                >
+                  Cancel
+                </Button>
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
