@@ -18,6 +18,7 @@ import {
   User,
   LogOut,
   BookOpen,
+  CreditCard
 } from 'lucide-react'
 
 import api from '@/services/api'
@@ -32,6 +33,7 @@ const navItems = [
   { label: 'Tickets', path: '/tickets', icon: Ticket },
   { label: 'Blogs', path: '/blogs', icon: BookOpen },
   { label: 'Profile', path: '/profile', icon: User },
+  { label: 'Subscription', path: '/subscription', icon: CreditCard },
 ]
 
 function PartnerLayout() {

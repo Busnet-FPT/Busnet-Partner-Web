@@ -18,6 +18,7 @@ import RouteDetailsPage from '@/pages/RouteDetailsPage'
 import BlogsPage from '@/pages/blog-management/BlogsPage'
 import AddBlogPage from '@/pages/blog-management/AddBlogPage'
 import EditBlogPage from '@/pages/blog-management/EditBlogPage'
+import SubscriptionHistoryPage from '@/pages/SubscriptionsPage'
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,8 @@ export const router = createBrowserRouter([
       { path: 'blogs/add', element: <AddBlogPage /> },
       { path: 'blogs/:id/edit', element: <EditBlogPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'subscription', element: <SubscriptionHistoryPage /> },
+
     ],
   },
   {
