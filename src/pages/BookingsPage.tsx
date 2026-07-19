@@ -91,6 +91,12 @@ interface Pagination {
   totalPages: number
 }
 
+interface BusOption {
+  _id: string
+  busName: string
+  licensePlate: string
+}
+
 const bookingStatusStyles: Record<BookingStatus, string> = {
   PENDING_PAYMENT: 'border-amber-200 bg-amber-50 text-amber-700',
   CONFIRMED: 'border-blue-200 bg-blue-50 text-blue-700',
@@ -165,6 +171,8 @@ function BookingsPage() {
   const [search, setSearch] = useState('')
   const [bookingStatus, setBookingStatus] = useState('ALL')
   const [paymentStatus, setPaymentStatus] = useState('ALL')
+  const [busId, setBusId] = useState('ALL')
+  const [buses, setBuses] = useState<BusOption[]>([])
   const [departureDate, setDepartureDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -184,12 +192,14 @@ function BookingsPage() {
             ...(search && { search }),
             ...(bookingStatus !== 'ALL' && { bookingStatus }),
             ...(paymentStatus !== 'ALL' && { paymentStatus }),
+            ...(busId !== 'ALL' && { busId }),
             ...(departureDate && { departureDate }),
           },
         })
 
         if (active) {
           setBookings(response.data.data?.bookings ?? [])
+          setBuses(response.data.data?.filterOptions?.buses ?? [])
           setPagination(response.data.data?.pagination ?? null)
         }
       } catch {
@@ -207,7 +217,7 @@ function BookingsPage() {
     return () => {
       active = false
     }
-  }, [bookingStatus, departureDate, page, paymentStatus, search])
+  }, [bookingStatus, busId, departureDate, page, paymentStatus, search])
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault()
@@ -220,6 +230,7 @@ function BookingsPage() {
     setSearch('')
     setBookingStatus('ALL')
     setPaymentStatus('ALL')
+    setBusId('ALL')
     setDepartureDate('')
     setPage(1)
   }
@@ -228,6 +239,7 @@ function BookingsPage() {
     search ||
       bookingStatus !== 'ALL' ||
       paymentStatus !== 'ALL' ||
+      busId !== 'ALL' ||
       departureDate,
   )
 
@@ -242,7 +254,7 @@ function BookingsPage() {
 
       <Card>
         <CardContent>
-          <form className="grid gap-3 xl:grid-cols-[minmax(260px,1fr)_auto_auto_auto_auto]" onSubmit={handleSearch}>
+          <form className="grid gap-3 xl:grid-cols-[minmax(240px,1fr)_auto_auto_auto_auto_auto]" onSubmit={handleSearch}>
             <div className="relative">
               <Search
                 size={16}
@@ -290,6 +302,22 @@ function BookingsPage() {
               <option value="EXPIRED">Expired</option>
               <option value="REFUNDED">Refunded</option>
               <option value="CANCELLED">Cancelled</option>
+            </select>
+            <select
+              value={busId}
+              onChange={(event) => {
+                setBusId(event.target.value)
+                setPage(1)
+              }}
+              className="h-9 rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none focus:border-blue-500"
+              aria-label="Filter by bus"
+            >
+              <option value="ALL">All buses</option>
+              {buses.map((bus) => (
+                <option key={bus._id} value={bus._id}>
+                  {bus.busName} ({bus.licensePlate})
+                </option>
+              ))}
             </select>
             <Input
               type="date"
@@ -343,6 +371,7 @@ function BookingsPage() {
                 <TableHead className="px-5">Booking</TableHead>
                 <TableHead>Passenger</TableHead>
                 <TableHead>Trip & Route</TableHead>
+                <TableHead>Bus</TableHead>
                 <TableHead>Departure</TableHead>
                 <TableHead>Seats</TableHead>
                 <TableHead>Total</TableHead>
@@ -375,6 +404,14 @@ function BookingsPage() {
                       <MapPin size={12} />
                       {booking.route?.originProvinceName || '—'} →{' '}
                       {booking.route?.destinationProvinceName || '—'}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <p className="font-medium text-slate-800">
+                      {booking.bus?.busName || '—'}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {booking.bus?.licensePlate || '—'}
                     </p>
                   </TableCell>
                   <TableCell>
