@@ -22,6 +22,7 @@ import {
   LogOut,
   Settings,
   BookOpen,
+  CreditCard
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ const navItems = [
   { label: 'Tickets', path: '/tickets', icon: Ticket },
   { label: 'Blogs', path: '/blogs', icon: BookOpen },
   { label: 'Profile', path: '/profile', icon: User },
+  { label: 'Subscription', path: '/subscription', icon: CreditCard },
 ]
 
 export type PartnerLayoutContext = {
