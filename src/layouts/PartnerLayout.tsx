@@ -15,6 +15,7 @@ import {
   MapPinned,
   ClipboardList,
   Ticket,
+  CreditCard,
   User,
   ChevronDown,
   Edit,
@@ -42,6 +43,7 @@ const navItems = [
   { label: 'Trips', path: '/trips', icon: MapPinned },
   { label: 'Bookings', path: '/bookings', icon: ClipboardList },
   { label: 'Tickets', path: '/tickets', icon: Ticket },
+  { label: 'Subscription', path: '/subscription', icon: CreditCard },
   { label: 'Blogs', path: '/blogs', icon: BookOpen },
   { label: 'Profile', path: '/profile', icon: User },
 ]
