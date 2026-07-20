@@ -12,7 +12,6 @@ import {
   Bus,
   Route,
   CalendarClock,
-  MapPinned,
   ClipboardList,
   Ticket,
   CreditCard,
@@ -223,7 +222,7 @@ function PartnerLayout() {
           <div>
             <h1 className="text-lg font-semibold">Partner Panel</h1>
             <p className="text-sm text-slate-500">
-              Manage buses, routes, schedules and trips
+              Manage buses, routes and schedules
             </p>
           </div>
 

@@ -29,6 +29,7 @@ import {
   ArrowRight,
   CalendarDays,
   FileText,
+  Ticket,
 } from 'lucide-react'
 import api from '@/services/api'
 
@@ -229,6 +230,14 @@ function ScheduleDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="text-emerald-600 transition-all hover:-translate-y-0.5 hover:bg-emerald-50 active:translate-y-0"
+            onClick={() => navigate(`/schedules/${id}/ticket-prices`)}
+          >
+            <Ticket size={16} />
+            Ticket Prices
+          </Button>
           <Button
             variant="outline"
             className="text-blue-600 transition-all hover:-translate-y-0.5 hover:bg-blue-50 active:translate-y-0"

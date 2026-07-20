@@ -28,6 +28,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -45,6 +52,13 @@ import {
 import api from '@/services/api'
 
 type EffectiveStatus = 'ACTIVE' | 'UPCOMING' | 'EXPIRED'
+
+const seatTypeOptions = [
+  { value: 'SEAT', label: 'Seat' },
+  { value: 'SLEEPER', label: 'Sleeper' },
+  { value: 'LIMOUSINE_SEAT', label: 'Limousine seat' },
+  { value: 'LIMOUSINE_SLEEPER', label: 'Limousine sleeper' },
+] as const
 
 interface TicketPrice {
   _id: string
@@ -87,6 +101,11 @@ interface PriceForm {
 interface TicketPricesResponseData {
   schedule: ScheduleSummary | null
   tickets: TicketPrice[]
+}
+
+interface RepricingResult {
+  updatedTrips: number
+  updatedSeats: number
 }
 
 const emptyForm: PriceForm = {
@@ -135,6 +154,12 @@ function getErrorMessage(error: unknown) {
     return error.response?.data?.message || 'Failed to save ticket price.'
   }
   return 'Failed to save ticket price.'
+}
+
+function getSuccessMessage(action: 'created' | 'updated', repricing?: RepricingResult) {
+  const baseMessage = `Ticket price ${action} successfully.`
+  if (!repricing) return baseMessage
+  return `${baseMessage} Repriced ${repricing.updatedSeats} available seat${repricing.updatedSeats === 1 ? '' : 's'} across ${repricing.updatedTrips} future trip${repricing.updatedTrips === 1 ? '' : 's'}.`
 }
 
 function SetTicketPricePage() {
@@ -267,11 +292,11 @@ function SetTicketPricePage() {
     }
 
     try {
-      await api.post(
+      const response = await api.post(
         `/partner/schedules/${scheduleId}/ticket-prices`,
         payload,
       )
-      setSuccess('Ticket price created successfully.')
+      setSuccess(getSuccessMessage('created', response.data.data?.repricing))
 
       setForm(emptyForm)
       const refreshedData = await requestTicketPrices()
@@ -306,7 +331,7 @@ function SetTicketPricePage() {
     setEditError('')
 
     try {
-      await api.put(
+      const response = await api.put(
         `/partner/schedules/${scheduleId}/ticket-prices/${editTarget._id}`,
         {
           seatType: editForm.seatType.trim().toUpperCase(),
@@ -324,7 +349,7 @@ function SetTicketPricePage() {
       setSchedule(refreshedData.schedule)
       setTicketPrices(refreshedData.tickets)
       setEditTarget(null)
-      setSuccess('Ticket price updated successfully.')
+      setSuccess(getSuccessMessage('updated', response.data.data?.repricing))
     } catch (submitError) {
       setEditError(getErrorMessage(submitError))
     } finally {
@@ -410,13 +435,24 @@ function SetTicketPricePage() {
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="seatType">Seat Type *</Label>
-                <Input
-                  id="seatType"
+                <Select
                   value={form.seatType}
-                  onChange={(event) => updateField('seatType', event.target.value)}
-                  placeholder="e.g. STANDARD, VIP"
-                  maxLength={50}
-                />
+                  onValueChange={(value) => updateField('seatType', value)}
+                >
+                  <SelectTrigger id="seatType" className="w-full">
+                    <SelectValue placeholder="Select a seat type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seatTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400">
+                  Must match the seat type configured on the assigned bus.
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
@@ -631,14 +667,21 @@ function SetTicketPricePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="editSeatType">Seat Type *</Label>
-                <Input
-                  id="editSeatType"
+                <Select
                   value={editForm.seatType}
-                  onChange={(event) =>
-                    updateEditField('seatType', event.target.value)
-                  }
-                  maxLength={50}
-                />
+                  onValueChange={(value) => updateEditField('seatType', value)}
+                >
+                  <SelectTrigger id="editSeatType" className="w-full">
+                    <SelectValue placeholder="Select a seat type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seatTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-end">
                 <div className="flex w-full items-center justify-between rounded-lg border p-3">
