@@ -15,7 +15,6 @@ import {
   LayoutGrid,
   List,
   HelpCircle,
-  Trash2,
   Loader2,
 } from 'lucide-react'
 import api from '@/services/api'
@@ -41,6 +40,7 @@ interface BlogItem {
   title: string
   slug: string
   summary?: string
+  content?: string
   coverImage: string
   tag: string
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'PUBLISHED' | 'REJECTED'
@@ -62,6 +62,8 @@ function BlogsPage() {
   const [blogToDelete, setBlogToDelete] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  const [selectedBlog, setSelectedBlog] = useState<BlogItem | null>(null)
 
   const [blogs, setBlogs] = useState<BlogItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -437,26 +439,33 @@ function BlogsPage() {
                         {blog.views.toLocaleString()} views
                       </span>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-                          disabled={blog.status === 'PENDING_APPROVAL'}
-                          title={blog.status === 'PENDING_APPROVAL' ? "Cannot edit post while pending approval" : ""}
-                          onClick={() => navigate(`/blogs/${blog._id}/edit`)}
+                          className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setSelectedBlog(blog)}
                         >
-                          Edit Post
+                          View
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-750 transition disabled:opacity-50"
+                          className="h-8 text-xs border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 cursor-pointer"
+                          disabled={blog.status === 'PENDING_APPROVAL'}
+                          title={blog.status === 'PENDING_APPROVAL' ? "Cannot edit post while pending approval" : ""}
+                          onClick={() => navigate(`/blogs/${blog._id}/edit`)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-750 transition disabled:opacity-50 cursor-pointer"
                           disabled={blog.status === 'PUBLISHED'}
                           title={blog.status === 'PUBLISHED' ? "Cannot delete a published post. Revert to Draft first." : ""}
                           onClick={() => setBlogToDelete(blog._id)}
                         >
-                          <Trash2 size={13} className="mr-1" />
                           Delete
                         </Button>
                       </div>
@@ -529,26 +538,33 @@ function BlogsPage() {
                         {blog.views.toLocaleString()} views
                       </span>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-                          disabled={blog.status === 'PENDING_APPROVAL'}
-                          title={blog.status === 'PENDING_APPROVAL' ? "Cannot edit post while pending approval" : ""}
-                          onClick={() => navigate(`/blogs/${blog._id}/edit`)}
+                          className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setSelectedBlog(blog)}
                         >
-                          Edit Post
+                          View
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-750 transition disabled:opacity-50"
+                          className="h-8 text-xs border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 cursor-pointer"
+                          disabled={blog.status === 'PENDING_APPROVAL'}
+                          title={blog.status === 'PENDING_APPROVAL' ? "Cannot edit post while pending approval" : ""}
+                          onClick={() => navigate(`/blogs/${blog._id}/edit`)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-750 transition disabled:opacity-50 cursor-pointer"
                           disabled={blog.status === 'PUBLISHED'}
                           title={blog.status === 'PUBLISHED' ? "Cannot delete a published post. Revert to Draft first." : ""}
                           onClick={() => setBlogToDelete(blog._id)}
                         >
-                          <Trash2 size={13} className="mr-1" />
                           Delete
                         </Button>
                       </div>
@@ -613,7 +629,7 @@ function BlogsPage() {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 border-slate-200 text-xs font-semibold"
+              className="h-9 border-slate-200 text-xs font-semibold cursor-pointer"
               onClick={() => setBlogToDelete(null)}
               disabled={deleting}
             >
@@ -622,7 +638,7 @@ function BlogsPage() {
             <Button
               variant="destructive"
               size="sm"
-              className="h-9 bg-rose-600 hover:bg-rose-750 text-white text-xs font-semibold"
+              className="h-9 bg-rose-600 hover:bg-rose-750 text-white text-xs font-semibold cursor-pointer"
               onClick={handleDeleteBlog}
               disabled={deleting}
             >
@@ -635,6 +651,120 @@ function BlogsPage() {
                 'Confirm Delete'
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blog Detail Preview Dialog */}
+      <Dialog open={selectedBlog !== null} onOpenChange={(open) => !open && setSelectedBlog(null)}>
+        <DialogContent className="max-w-5xl bg-white border border-slate-200 shadow-xl overflow-y-auto max-h-[90vh] rounded-2xl p-6">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
+              <Newspaper className="size-5 text-blue-600" />
+              Blog Post Detail
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Preview your blog post content and metadata.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedBlog && (
+            <div className="mt-6 space-y-6">
+              {/* Cover Image */}
+              {selectedBlog.coverImage && (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <img
+                    src={selectedBlog.coverImage.startsWith('http') ? selectedBlog.coverImage : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedBlog.coverImage}`}
+                    alt="Cover"
+                    className="h-56 w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1546074177-ffedd79d4c4b?w=800&auto=format&fit=crop&q=60'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Grid Metadata */}
+              <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 border border-slate-150 rounded-xl p-5 bg-slate-50/50">
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Title</label>
+                  <p className="mt-0.5 text-base font-bold text-slate-800 leading-snug">{selectedBlog.title}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</label>
+                  <div className="mt-1">{getStatusBadge(selectedBlog.status)}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category Tag</label>
+                  <div>
+                    <span className={`inline-block mt-1 rounded-md px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-2xs ${getTagBadgeStyle(selectedBlog.tag)}`}>
+                      {selectedBlog.tag}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Created Date</label>
+                  <p className="mt-0.5 text-sm text-slate-700 font-medium">
+                    {new Date(selectedBlog.createdAt).toLocaleString('vi-VN')}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Views</label>
+                  <p className="mt-0.5 text-sm text-slate-700 font-medium">{selectedBlog.views.toLocaleString()} views</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Slug</label>
+                  <p className="mt-0.5 text-xs font-mono text-slate-600 bg-white border rounded px-2 py-1 select-all">{selectedBlog.slug}</p>
+                </div>
+                {selectedBlog.summary && (
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Summary</label>
+                    <p className="mt-0.5 text-xs text-slate-600 leading-relaxed bg-white border rounded p-2.5">{selectedBlog.summary}</p>
+                  </div>
+                )}
+                {selectedBlog.status === 'REJECTED' && selectedBlog.rejectionReason && (
+                  <div className="sm:col-span-2 border border-rose-200 bg-rose-50/50 rounded-xl p-3">
+                    <label className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">Rejection Reason</label>
+                    <p className="mt-0.5 text-xs text-rose-700 font-medium leading-relaxed">{selectedBlog.rejectionReason}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* HTML Blog Content Preview */}
+              <div className="space-y-2 border-t pt-5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Blog Body Content
+                </label>
+                <div 
+                  className="rounded-xl border border-slate-200 p-5 bg-white overflow-y-auto max-h-[500px] text-slate-700 leading-relaxed shadow-inner"
+                  dangerouslySetInnerHTML={{ __html: selectedBlog.content || '' }}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-6 border-t pt-4 flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-slate-200 text-xs font-semibold cursor-pointer"
+              onClick={() => setSelectedBlog(null)}
+            >
+              Close
+            </Button>
+            {selectedBlog && selectedBlog.status !== 'PENDING_APPROVAL' && (
+              <Button
+                size="sm"
+                className="h-9 bg-blue-600 hover:bg-blue-750 text-white text-xs font-semibold cursor-pointer"
+                onClick={() => {
+                  const blogId = selectedBlog._id;
+                  setSelectedBlog(null);
+                  navigate(`/blogs/${blogId}/edit`);
+                }}
+              >
+                Edit Post
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

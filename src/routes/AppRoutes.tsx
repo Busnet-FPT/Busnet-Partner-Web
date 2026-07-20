@@ -7,12 +7,16 @@ import SchedulesPage from '@/pages/SchedulesPage'
 import AddSchedulePage from '@/pages/AddSchedulePage'
 import ScheduleDetailPage from '@/pages/ScheduleDetailPage'
 import EditSchedulePage from '@/pages/EditSchedulePage'
+import SetTicketPricePage from '@/pages/SetTicketPricePage'
 // import TripsPage from '@/pages/TripsPage'
-// import BookingsPage from '@/pages/BookingsPage'
-// import TicketsPage from '@/pages/TicketsPage'
+import BookingsPage from '@/pages/BookingsPage'
+import BookingDetailPage from '@/pages/BookingDetailPage'
+import TicketsPage from '@/pages/TicketsPage'
+import TicketDetailPage from '@/pages/TicketDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ChangePasswordPage from '@/pages/ChangePasswordPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import RouteDetailsPage from '@/pages/RouteDetailsPage'
 import BlogsPage from '@/pages/blog-management/BlogsPage'
@@ -41,9 +45,15 @@ export const router = createBrowserRouter([
       { path: 'schedules/add', element: <AddSchedulePage /> },
       { path: 'schedules/:id', element: <ScheduleDetailPage /> },
       { path: 'schedules/:id/edit', element: <EditSchedulePage /> },
+      {
+        path: 'schedules/:scheduleId/ticket-prices',
+        element: <SetTicketPricePage />,
+      },
       // { path: 'trips', element: <TripsPage /> },
-      // { path: 'bookings', element: <BookingsPage /> },
-      // { path: 'tickets', element: <TicketsPage /> },
+      { path: 'bookings', element: <BookingsPage /> },
+      { path: 'bookings/:bookingId', element: <BookingDetailPage /> },
+      { path: 'tickets', element: <TicketsPage /> },
+      { path: 'tickets/:ticketId', element: <TicketDetailPage /> },
       { path: 'blogs', element: <BlogsPage /> },
       { path: 'blogs/add', element: <AddBlogPage /> },
       { path: 'blogs/:id/edit', element: <EditBlogPage /> },
