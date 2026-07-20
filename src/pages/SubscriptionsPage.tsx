@@ -4,7 +4,7 @@ import api from '@/services/api'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-
+import { Label } from '@/components/ui/label'
 import {
   DollarSign,
   Route,
@@ -12,7 +12,8 @@ import {
   Clock,
   Eye,
   CreditCard,
-  Calendar
+  Calendar,
+  Filter
 } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 import { Search } from 'lucide-react'
 
@@ -56,6 +63,22 @@ function SubscriptionHistoryPage() {
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
+  const [planId, setPlanId] = useState('ALL')
+
+  const [subscriptionDateFrom, setSubscriptionDateFrom] = useState('')
+  const [subscriptionDateTo, setSubscriptionDateTo] = useState('')
+
+  const [expirationDateFrom, setExpirationDateFrom] = useState('')
+  const [expirationDateTo, setExpirationDateTo] = useState('')
+
+  const [sortBy, setSortBy] = useState('subscriptionDate_desc')
+
+  const [plans, setPlans] = useState<
+    {
+      _id: string
+      planName: string
+    }[]
+  >([])
   const fetchSubscriptions = async () => {
     setLoading(true)
 
@@ -69,6 +92,28 @@ function SubscriptionHistoryPage() {
       if (statusFilter !== 'ALL') {
         params.subscriptionStatus = statusFilter
       }
+
+      if (planId !== 'ALL') {
+        params.planId = planId
+      }
+
+      if (subscriptionDateFrom) {
+        params.subscriptionDateFrom = subscriptionDateFrom
+      }
+
+      if (subscriptionDateTo) {
+        params.subscriptionDateTo = subscriptionDateTo
+      }
+
+      if (expirationDateFrom) {
+        params.expirationDateFrom = expirationDateFrom
+      }
+
+      if (expirationDateTo) {
+        params.expirationDateTo = expirationDateTo
+      }
+
+      params.sortBy = sortBy
 
       const res = await api.get(
         '/partner/subscription',
@@ -85,7 +130,16 @@ function SubscriptionHistoryPage() {
     }
   }
 
+  const fetchPlans = async () => {
+    try {
+      const res = await api.get('/partner/subscription/plans')
+      setPlans(res.data.data)
+    } catch (error) {
+      console.error(error)
+    }
+  }
   useEffect(() => {
+    fetchPlans()
     fetchSubscriptions()
   }, [])
 
@@ -116,7 +170,6 @@ function SubscriptionHistoryPage() {
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 
         <div className="relative w-full md:max-w-md">
-
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -125,72 +178,220 @@ function SubscriptionHistoryPage() {
           <Input
             placeholder="Search by plan name or code..."
             value={keyword}
-            onChange={(e) =>
-              setKeyword(e.target.value)
-            }
+            onChange={(e) => setKeyword(e.target.value)}
             className="pl-9"
           />
-
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2">
 
-          <Select
-            value={statusFilter}
-            onValueChange={setStatusFilter}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </PopoverTrigger>
 
-            <SelectContent>
-              <SelectItem value="ALL">
-                All Status
-              </SelectItem>
+            <PopoverContent className="w-[380px] space-y-5">
 
-              <SelectItem value="ACTIVE">
-                Active
-              </SelectItem>
+              <div>
+                <h4 className="font-semibold">Filters</h4>
+                <p className="text-sm text-slate-500">
+                  Filter your subscription history.
+                </p>
+              </div>
 
-              <SelectItem value="EXPIRED">
-                Expired
-              </SelectItem>
+              {/* Status */}
+              <div className="space-y-2">
+                <Label>Status</Label>
 
-              <SelectItem value="CANCELLED">
-                Cancelled
-              </SelectItem>
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
 
-              <SelectItem value="PENDING">
-                Pending
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      All Status
+                    </SelectItem>
 
-          <Button
-            onClick={fetchSubscriptions}
-          >
+                    <SelectItem value="ACTIVE">
+                      Active
+                    </SelectItem>
+
+                    <SelectItem value="EXPIRED">
+                      Expired
+                    </SelectItem>
+
+                    <SelectItem value="CANCELLED">
+                      Cancelled
+                    </SelectItem>
+
+                    <SelectItem value="PENDING">
+                      Pending
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Plan */}
+              <div className="space-y-2">
+                <Label>Subscription Plan</Label>
+
+                <Select
+                  value={planId}
+                  onValueChange={setPlanId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Plan" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      All Plans
+                    </SelectItem>
+
+                    {plans.map((plan) => (
+                      <SelectItem
+                        key={plan._id}
+                        value={plan._id}
+                      >
+                        {plan.planName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Subscription Date */}
+              <div className="space-y-2">
+                <Label>Subscription Date</Label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="date"
+                    value={subscriptionDateFrom}
+                    onChange={(e) =>
+                      setSubscriptionDateFrom(e.target.value)
+                    }
+                  />
+
+                  <Input
+                    type="date"
+                    value={subscriptionDateTo}
+                    onChange={(e) =>
+                      setSubscriptionDateTo(e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Expiration Date */}
+              <div className="space-y-2">
+                <Label>Expiration Date</Label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="date"
+                    value={expirationDateFrom}
+                    onChange={(e) =>
+                      setExpirationDateFrom(e.target.value)
+                    }
+                  />
+
+                  <Input
+                    type="date"
+                    value={expirationDateTo}
+                    onChange={(e) =>
+                      setExpirationDateTo(e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Sort */}
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+
+                <Select
+                  value={sortBy}
+                  onValueChange={setSortBy}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+
+                    <SelectItem value="subscriptionDate_desc">
+                      Newest Subscription
+                    </SelectItem>
+
+                    <SelectItem value="subscriptionDate_asc">
+                      Oldest Subscription
+                    </SelectItem>
+
+                    <SelectItem value="expirationDate_desc">
+                      Expiration ↓
+                    </SelectItem>
+
+                    <SelectItem value="expirationDate_asc">
+                      Expiration ↑
+                    </SelectItem>
+
+                    <SelectItem value="price_desc">
+                      Highest Price
+                    </SelectItem>
+
+                    <SelectItem value="price_asc">
+                      Lowest Price
+                    </SelectItem>
+
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-between pt-2">
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStatusFilter('ALL')
+                    setPlanId('ALL')
+
+                    setSubscriptionDateFrom('')
+                    setSubscriptionDateTo('')
+
+                    setExpirationDateFrom('')
+                    setExpirationDateTo('')
+
+                    setSortBy('subscriptionDate_desc')
+                  }}
+                >
+                  Reset
+                </Button>
+
+                <Button onClick={fetchSubscriptions}>
+                  Apply Filters
+                </Button>
+
+              </div>
+
+            </PopoverContent>
+          </Popover>
+
+          <Button onClick={fetchSubscriptions}>
             Search
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              setKeyword('')
-              setStatusFilter('ALL')
-
-              api
-                .get('/partner/subscriptions')
-                .then((res) =>
-                  setSubscriptions(res.data.data)
-                )
-            }}
-          >
-            Reset
           </Button>
 
         </div>
 
       </div>
+
 
       {subscriptions.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center">
