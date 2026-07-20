@@ -23,6 +23,8 @@ import AddBusPage from '@/pages/AddBusPage'
 import UpdateBusPage from '@/pages/UpdateBusPage'
 import ConfigureSeatPage from '@/pages/ConfigureSeatPage'
 import RouteDetailsPage from '@/pages/RouteDetailsPage'
+import AddRoutePage from '@/pages/AddRoutePage'
+import UpdateRoutePage from '@/pages/UpdateRoutePage'
 import BlogsPage from '@/pages/blog-management/BlogsPage'
 import AddBlogPage from '@/pages/blog-management/AddBlogPage'
 import EditBlogPage from '@/pages/blog-management/EditBlogPage'
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
       { path: 'buses/:id/layout', element: <ConfigureSeatPage /> },
       { path: 'routes', element: <RoutesPage /> },
       { path: 'routes/:id', element: <RouteDetailsPage /> },
+      { path: 'routes/add', element: <AddRoutePage /> },
+      { path: 'routes/:id/update', element: <UpdateRoutePage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'schedules/add', element: <AddSchedulePage /> },
       { path: 'schedules/:id', element: <ScheduleDetailPage /> },
