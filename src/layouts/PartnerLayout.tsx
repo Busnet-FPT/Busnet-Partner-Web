@@ -37,15 +37,14 @@ import api from '@/services/api'
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { label: 'Subscription', path: '/subscription', icon: CreditCard },
   { label: 'Buses', path: '/buses', icon: Bus },
   { label: 'Routes', path: '/routes', icon: Route },
   { label: 'Schedules', path: '/schedules', icon: CalendarClock },
-  { label: 'Trips', path: '/trips', icon: MapPinned },
   { label: 'Bookings', path: '/bookings', icon: ClipboardList },
   { label: 'Tickets', path: '/tickets', icon: Ticket },
   { label: 'Blogs', path: '/blogs', icon: BookOpen },
   { label: 'Profile', path: '/profile', icon: User },
-  { label: 'Subscription', path: '/subscription', icon: CreditCard },
 ]
 
 export type PartnerLayoutContext = {
