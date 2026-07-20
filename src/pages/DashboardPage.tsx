@@ -650,9 +650,9 @@ function DashboardPage() {
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-blue-600 hover:text-blue-700"
-                  onClick={() => navigate('/trips')}
+                  onClick={() => navigate('/schedules')}
                 >
-                  View All
+                  View Schedules
                   <ArrowRight size={14} />
                 </Button>
               )}

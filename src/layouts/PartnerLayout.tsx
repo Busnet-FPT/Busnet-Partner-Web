@@ -12,7 +12,6 @@ import {
   Bus,
   Route,
   CalendarClock,
-  MapPinned,
   ClipboardList,
   Ticket,
   CreditCard,
@@ -40,7 +39,6 @@ const navItems = [
   { label: 'Buses', path: '/buses', icon: Bus },
   { label: 'Routes', path: '/routes', icon: Route },
   { label: 'Schedules', path: '/schedules', icon: CalendarClock },
-  { label: 'Trips', path: '/trips', icon: MapPinned },
   { label: 'Bookings', path: '/bookings', icon: ClipboardList },
   { label: 'Tickets', path: '/tickets', icon: Ticket },
   { label: 'Subscription', path: '/subscription', icon: CreditCard },
@@ -224,7 +222,7 @@ function PartnerLayout() {
           <div>
             <h1 className="text-lg font-semibold">Partner Panel</h1>
             <p className="text-sm text-slate-500">
-              Manage buses, routes, schedules and trips
+              Manage buses, routes and schedules
             </p>
           </div>
 
