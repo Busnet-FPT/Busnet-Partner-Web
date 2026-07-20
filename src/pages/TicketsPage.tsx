@@ -77,6 +77,12 @@ interface Pagination {
   totalPages: number
 }
 
+interface BusOption {
+  _id: string
+  busName: string
+  licensePlate: string
+}
+
 const statusStyles: Record<TicketStatus, string> = {
   ISSUED: 'border-blue-200 bg-blue-50 text-blue-700',
   USED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -110,6 +116,8 @@ function TicketsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
   const [checkInStatus, setCheckInStatus] = useState('ALL')
+  const [busId, setBusId] = useState('ALL')
+  const [buses, setBuses] = useState<BusOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -128,11 +136,13 @@ function TicketsPage() {
             ...(search && { search }),
             ...(status !== 'ALL' && { status }),
             ...(checkInStatus !== 'ALL' && { checkInStatus }),
+            ...(busId !== 'ALL' && { busId }),
           },
         })
 
         if (active) {
           setTickets(response.data.data?.tickets ?? [])
+          setBuses(response.data.data?.filterOptions?.buses ?? [])
           setPagination(response.data.data?.pagination ?? null)
         }
       } catch {
@@ -146,7 +156,7 @@ function TicketsPage() {
     return () => {
       active = false
     }
-  }, [checkInStatus, page, search, status])
+  }, [busId, checkInStatus, page, search, status])
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault()
@@ -159,10 +169,13 @@ function TicketsPage() {
     setSearch('')
     setStatus('ALL')
     setCheckInStatus('ALL')
+    setBusId('ALL')
     setPage(1)
   }
 
-  const hasFilters = Boolean(search || status !== 'ALL' || checkInStatus !== 'ALL')
+  const hasFilters = Boolean(
+    search || status !== 'ALL' || checkInStatus !== 'ALL' || busId !== 'ALL',
+  )
 
   return (
     <div className="space-y-6">
@@ -218,6 +231,22 @@ function TicketsPage() {
               <option value="true">Checked in</option>
               <option value="false">Not checked in</option>
             </select>
+            <select
+              value={busId}
+              onChange={(event) => {
+                setBusId(event.target.value)
+                setPage(1)
+              }}
+              className="h-9 rounded-md border bg-white px-3 text-sm text-slate-700 shadow-xs outline-none focus:border-blue-500"
+              aria-label="Filter by bus"
+            >
+              <option value="ALL">All buses</option>
+              {buses.map((bus) => (
+                <option key={bus._id} value={bus._id}>
+                  {bus.busName} ({bus.licensePlate})
+                </option>
+              ))}
+            </select>
             <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
               <Search size={16} />
               Search
@@ -258,6 +287,7 @@ function TicketsPage() {
                 <TableHead className="px-5">Ticket</TableHead>
                 <TableHead>Passenger</TableHead>
                 <TableHead>Trip & Route</TableHead>
+                <TableHead>Bus</TableHead>
                 <TableHead>Departure</TableHead>
                 <TableHead>Seat</TableHead>
                 <TableHead>Status</TableHead>
@@ -289,6 +319,14 @@ function TicketsPage() {
                       <MapPin size={12} />
                       {ticket.route?.originProvinceName || '—'} →{' '}
                       {ticket.route?.destinationProvinceName || '—'}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <p className="font-medium text-slate-800">
+                      {ticket.bus?.busName || '—'}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {ticket.bus?.licensePlate || '—'}
                     </p>
                   </TableCell>
                   <TableCell>

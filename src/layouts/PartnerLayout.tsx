@@ -15,6 +15,7 @@ import {
   MapPinned,
   ClipboardList,
   Ticket,
+  CreditCard,
   User,
   ChevronDown,
   Edit,
@@ -22,7 +23,6 @@ import {
   LogOut,
   Settings,
   BookOpen,
-  CreditCard
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -170,14 +170,18 @@ function PartnerLayout() {
                   key={item.path}
                   to={item.path}
                   end={item.path === '/'}
-                  className={({ isActive }) =>
-                    [
+                  className={({ isActive }) => {
+                    const isProfileSection =
+                      item.path === '/profile' &&
+                      location.pathname === '/change-password'
+
+                    return [
                       'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition',
-                      isActive
+                      isActive || isProfileSection
                         ? 'bg-blue-600 text-white'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                     ].join(' ')
-                  }
+                  }}
                 >
                   <Icon size={18} />
                   {item.label}
