@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ArrowLeft,
+  CalendarDays,
   Check,
   CheckCircle2,
   Clock3,
   Copy,
   CreditCard,
-  History,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   XCircle,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 import api from '@/services/api'
 import { Badge } from '@/components/ui/badge'
@@ -31,14 +33,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
 type Plan = {
   _id: string
@@ -61,7 +55,15 @@ type Subscription = {
   subscriptionDate: string
   expirationDate: string
   daysRemaining: number
+  remainingTime: {
+    milliseconds: number
+    days: number
+    hours: number
+    minutes: number
+    expired: boolean
+  }
   autoRenew: boolean
+  canExtend: boolean
   canRenew: boolean
   plan: Plan | null
 }
@@ -76,21 +78,30 @@ type Payment = {
   qrUrl: string
   bank: string
   accountNumber: string
-}
-
-type HistoryItem = {
-  _id: string
-  transactionId: string | null
-  subscriptionDate: string
-  expirationDate: string
-  status: string
-  plan: Pick<Plan, '_id' | 'planName' | 'code' | 'price' | 'discount' | 'durationDays'> | null
+  operation?: 'EXTEND' | 'RENEW' | null
+  planName?: string | null
+  queuedSubscription?: {
+    status: string
+    scheduledStartDate: string
+    scheduledExpirationDate: string
+    plan: Pick<Plan, '_id' | 'planName' | 'code' | 'durationDays'> | null
+  } | null
 }
 
 type Overview = {
   subscription: Subscription | null
   pendingPayment: Payment | null
-  history: HistoryItem[]
+  queue: QueueItem[]
+}
+
+type QueueItem = {
+  position: number
+  _id: string
+  operation: 'INITIAL' | 'EXTEND' | 'RENEW'
+  scheduledStartDate: string
+  scheduledExpirationDate: string
+  status: string
+  plan: Pick<Plan, '_id' | 'planName' | 'code' | 'durationDays'> | null
 }
 
 const formatCurrency = (value: number) =>
@@ -124,7 +135,8 @@ const statusClass: Record<string, string> = {
   FAILED: 'border-red-200 bg-red-50 text-red-700',
 }
 
-function SubscriptionPage() {
+function CurrentSubscriptionPage() {
+  const navigate = useNavigate()
   const [overview, setOverview] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [renewing, setRenewing] = useState(false)
@@ -135,11 +147,15 @@ function SubscriptionPage() {
   const [success, setSuccess] = useState('')
   const [copied, setCopied] = useState('')
   const [secondsLeft, setSecondsLeft] = useState(0)
+  const [renewOptions, setRenewOptions] = useState<Plan[]>([])
+  const [renewDialogOpen, setRenewDialogOpen] = useState(false)
+  const [loadingPlans, setLoadingPlans] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState('')
 
   const fetchOverview = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true)
     try {
-      const response = await api.get('/partner/subscription')
+      const response = await api.get('/partner/subscription/overview')
       const data = response.data.data as Overview
       setOverview(data)
       if (data.pendingPayment) {
@@ -181,13 +197,14 @@ function SubscriptionPage() {
     const poll = window.setInterval(async () => {
       try {
         const response = await api.get(
-          `/partner/subscription/renew/${paymentTransactionId}/status`,
+          `/partner/subscription/payments/${paymentTransactionId}/status`,
         )
         const next = response.data.data as Payment
         setPayment(next)
 
         if (next.status === 'SUCCESS') {
-          setSuccess('Payment confirmed. Your subscription has been extended successfully.')
+          const action = next.operation === 'RENEW' ? 'renewal' : 'extension'
+          setSuccess(`Payment confirmed. Your ${action} has been added to the subscription queue.`)
           await fetchOverview()
         } else if (['FAILED', 'EXPIRED', 'CANCELLED'].includes(next.status)) {
           setError(`Renewal payment is ${next.status.toLowerCase()}.`)
@@ -212,15 +229,18 @@ function SubscriptionPage() {
     return new Date(base.getTime() + plan.durationDays * 24 * 60 * 60 * 1000)
   }, [overview])
 
-  const startRenewal = async () => {
+  const startPayment = async (operation: 'EXTEND' | 'RENEW', planId?: string) => {
     setRenewing(true)
     setError('')
     setSuccess('')
     try {
-      const response = await api.post('/partner/subscription/renew')
+      const response = operation === 'EXTEND'
+        ? await api.post('/partner/subscription/extend')
+        : await api.post('/partner/subscription/renew', { planId })
       const nextPayment = response.data.data.payment as Payment
       setPayment(nextPayment)
       setPaymentOpen(true)
+      setRenewDialogOpen(false)
     } catch (renewError) {
       setError(getErrorMessage(renewError))
     } finally {
@@ -228,11 +248,27 @@ function SubscriptionPage() {
     }
   }
 
+  const openRenewDialog = async () => {
+    setRenewDialogOpen(true)
+    setLoadingPlans(true)
+    setError('')
+    try {
+      const response = await api.get('/partner/subscription/renew-options')
+      const options = response.data.data as Plan[]
+      setRenewOptions(options)
+      setSelectedPlanId(options[0]?._id || '')
+    } catch (plansError) {
+      setError(getErrorMessage(plansError))
+    } finally {
+      setLoadingPlans(false)
+    }
+  }
+
   const cancelPayment = async () => {
     if (!payment) return
     setCancelling(true)
     try {
-      await api.post(`/partner/subscription/renew/${payment.transactionId}/cancel`)
+      await api.post(`/partner/subscription/payments/${payment.transactionId}/cancel`)
       setPayment(null)
       setPaymentOpen(false)
       setSuccess('Pending renewal payment cancelled.')
@@ -265,9 +301,14 @@ function SubscriptionPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <h2 className="text-2xl font-bold">Subscription</h2>
-          <p className="text-slate-500">Manage your current plan and extend its validity.</p>
+        <div className="flex items-start gap-3">
+          <Button variant="outline" size="icon" onClick={() => navigate('/subscription')}>
+            <ArrowLeft size={17} />
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">Current subscription</h2>
+            <p className="text-slate-500">View your current plan, remaining time and upcoming plans.</p>
+          </div>
         </div>
         <Button variant="outline" onClick={() => fetchOverview()}>
           <RefreshCw size={15} />
@@ -323,7 +364,11 @@ function SubscriptionPage() {
                 </div>
                 <div className="rounded-lg bg-slate-50 p-4">
                   <p className="text-xs font-medium uppercase text-slate-400">Remaining</p>
-                  <p className="mt-1 font-semibold">{subscription.daysRemaining} days</p>
+                  <p className="mt-1 font-semibold">
+                    {subscription.remainingTime.expired
+                      ? 'Expired'
+                      : `${subscription.remainingTime.days}d ${subscription.remainingTime.hours}h ${subscription.remainingTime.minutes}m`}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-4">
                   <p className="text-xs font-medium uppercase text-slate-400">Plan duration</p>
@@ -351,10 +396,10 @@ function SubscriptionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Sparkles className="text-blue-600" size={18} />
-                Extend current plan
+                Manage subscription
               </CardTitle>
               <CardDescription>
-                Renewal time is added after your current expiration date.
+                Extend this plan or renew with a different available plan.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -385,11 +430,20 @@ function SubscriptionPage() {
               </div>
               <Button
                 className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={!subscription.canRenew || renewing}
-                onClick={startRenewal}
+                disabled={!subscription.canExtend || renewing}
+                onClick={() => startPayment('EXTEND')}
               >
                 {renewing ? <LoaderCircle className="animate-spin" /> : <CreditCard />}
-                {renewing ? 'Preparing payment...' : 'Renew subscription'}
+                {renewing ? 'Preparing payment...' : 'Extend current plan'}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={!subscription.canRenew || renewing}
+                onClick={openRenewDialog}
+              >
+                <RefreshCw />
+                Renew with another plan
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
                 <ShieldCheck size={13} /> Secure payment confirmation via SePay
@@ -402,47 +456,98 @@ function SubscriptionPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <History size={18} className="text-blue-600" />
-            Renewal history
+            <CalendarDays size={18} className="text-blue-600" />
+            Subscription queue
           </CardTitle>
-          <CardDescription>Up to 20 most recent subscription periods.</CardDescription>
+          <CardDescription>
+            Paid plans start automatically in this order after the current plan expires.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {!overview?.history.length ? (
-            <div className="py-8 text-center text-sm text-slate-400">No renewal history yet.</div>
+          {!overview?.queue?.length ? (
+            <div className="py-8 text-center text-sm text-slate-400">No plans are waiting in the queue.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overview.history.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell>
-                      <p className="font-medium">{item.plan?.planName || 'Unknown plan'}</p>
-                      <p className="text-xs text-slate-400">{item.plan?.code}</p>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDate(item.subscriptionDate)} – {formatDate(item.expirationDate)}
-                    </TableCell>
-                    <TableCell>{item.plan?.durationDays || '—'} days</TableCell>
-                    <TableCell>
-                      <Badge className={statusClass[item.status] || 'bg-slate-100 text-slate-600'}>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-3">
+              {overview.queue.map((item) => (
+                <div key={item._id} className="flex flex-col justify-between gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 font-semibold text-blue-700">
+                      {item.position}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{item.plan?.planName || 'Unknown plan'}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.operation === 'EXTEND' ? 'Extension' : 'Plan renewal'} · {item.plan?.code}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-sm sm:text-right">
+                    <p className="font-medium">
+                      {formatDate(item.scheduledStartDate)} – {formatDate(item.scheduledExpirationDate)}
+                    </p>
+                    <Badge className="mt-1 border-amber-200 bg-amber-50 text-amber-700">Waiting</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Renew with another plan</DialogTitle>
+            <DialogDescription>
+              Choose a different plan. If your current plan still has time left, the new plan will wait in the queue.
+            </DialogDescription>
+          </DialogHeader>
+          {loadingPlans ? (
+            <div className="flex justify-center py-12 text-slate-500">
+              <LoaderCircle className="mr-2 animate-spin" /> Loading plans...
+            </div>
+          ) : renewOptions.length === 0 ? (
+            <div className="rounded-lg border border-dashed py-10 text-center text-sm text-slate-500">
+              No other active subscription plans are available.
+            </div>
+          ) : (
+            <div className="grid max-h-[420px] gap-3 overflow-y-auto py-1 sm:grid-cols-2">
+              {renewOptions.map((option) => {
+                const finalPrice = Math.max(0, Math.round(option.price * (1 - (option.discount || 0) / 100)))
+                const selected = selectedPlanId === option._id
+                return (
+                  <button
+                    type="button"
+                    key={option._id}
+                    onClick={() => setSelectedPlanId(option._id)}
+                    className={`rounded-xl border p-4 text-left transition ${selected ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'hover:border-slate-300'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{option.planName}</p>
+                        <p className="text-xs text-slate-500">{option.code}</p>
+                      </div>
+                      {selected && <CheckCircle2 className="text-blue-600" size={20} />}
+                    </div>
+                    <p className="mt-3 text-xl font-bold text-blue-700">{formatCurrency(finalPrice)}</p>
+                    <p className="mt-1 text-xs text-slate-500">{option.durationDays} days · {option.maxBuses} buses · {option.maxRoutes} routes</p>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenewDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!selectedPlanId || renewing}
+              onClick={() => startPayment('RENEW', selectedPlanId)}
+            >
+              {renewing ? <LoaderCircle className="animate-spin" /> : <CreditCard />}
+              Continue to payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={paymentOpen} onOpenChange={(open) => {
         if (!open && payment?.status === 'PROCESSING') return
@@ -450,7 +555,7 @@ function SubscriptionPage() {
       }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Renew subscription payment</DialogTitle>
+            <DialogTitle>{payment?.operation === 'RENEW' ? 'Renew subscription payment' : 'Extend subscription payment'}</DialogTitle>
             <DialogDescription>
               Scan the QR code or transfer with the exact amount and content below.
             </DialogDescription>
@@ -460,8 +565,10 @@ function SubscriptionPage() {
             payment.status === 'SUCCESS' ? (
               <div className="py-8 text-center">
                 <CheckCircle2 className="mx-auto mb-3 text-green-600" size={52} />
-                <h3 className="text-lg font-semibold">Subscription renewed</h3>
-                <p className="mt-1 text-sm text-slate-500">Your new expiration date is now active.</p>
+                <h3 className="text-lg font-semibold">Payment confirmed</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Your paid plan has been added to the queue and will activate automatically.
+                </p>
               </div>
             ) : (
               <div className="grid gap-5 md:grid-cols-[220px_1fr]">
@@ -520,4 +627,4 @@ function SubscriptionPage() {
   )
 }
 
-export default SubscriptionPage
+export default CurrentSubscriptionPage

@@ -10,7 +10,6 @@ import {
   Route,
   Package,
   Clock,
-  Eye,
   CreditCard,
   Calendar,
   Filter
@@ -83,7 +82,7 @@ function SubscriptionHistoryPage() {
     setLoading(true)
 
     try {
-      const params: any = {}
+      const params: Record<string, string> = {}
 
       if (keyword.trim()) {
         params.keyword = keyword
@@ -139,8 +138,13 @@ function SubscriptionHistoryPage() {
     }
   }
   useEffect(() => {
-    fetchPlans()
-    fetchSubscriptions()
+    const timer = window.setTimeout(() => {
+      void fetchPlans()
+      void fetchSubscriptions()
+    }, 0)
+    return () => window.clearTimeout(timer)
+    // The initial request intentionally uses the default filter state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -165,6 +169,16 @@ function SubscriptionHistoryPage() {
             View all subscription plans you have purchased.
           </p>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <Button
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => navigate('/subscription/current')}
+        >
+          <CreditCard className="mr-2 h-4 w-4" />
+          Current subscription
+        </Button>
       </div>
 
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -488,19 +502,6 @@ function SubscriptionHistoryPage() {
                 </div>
 
               </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="text-blue-600 hover:bg-blue-50"
-                onClick={() =>
-                  navigate(
-                    `/subscriptions/${subscription._id}`
-                  )
-                }
-              >
-                <Eye size={16} />
-              </Button>
 
             </div>
           ))}

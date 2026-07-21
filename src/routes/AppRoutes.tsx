@@ -16,7 +16,7 @@ import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import ChangePasswordPage from '@/pages/ChangePasswordPage'
-import SubscriptionPage from '@/pages/SubscriptionPage'
+import CurrentSubscriptionPage from '@/pages/CurrentSubscriptionPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import BusDetailsPage from '@/pages/BusDetailsPage'
 import AddBusPage from '@/pages/AddBusPage'
@@ -71,6 +71,7 @@ export const router = createBrowserRouter([
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },
       { path: 'subscription', element: <SubscriptionHistoryPage /> },
+      { path: 'subscription/current', element: <CurrentSubscriptionPage /> },
     ],
   },
   {
