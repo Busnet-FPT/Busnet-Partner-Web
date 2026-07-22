@@ -16,6 +16,7 @@ import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import ChangePasswordPage from '@/pages/ChangePasswordPage'
+import CurrentSubscriptionPage from '@/pages/CurrentSubscriptionPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import BusDetailsPage from '@/pages/BusDetailsPage'
 import AddBusPage from '@/pages/AddBusPage'
@@ -27,7 +28,6 @@ import UpdateRoutePage from '@/pages/UpdateRoutePage'
 import BlogsPage from '@/pages/blog-management/BlogsPage'
 import AddBlogPage from '@/pages/blog-management/AddBlogPage'
 import EditBlogPage from '@/pages/blog-management/EditBlogPage'
-import SubscriptionPage from '@/pages/SubscriptionPage'
 import SubscriptionHistoryPage from '@/pages/SubscriptionsHistoryPage'
 
 export const router = createBrowserRouter([
@@ -70,7 +70,8 @@ export const router = createBrowserRouter([
       { path: 'blogs/:id/edit', element: <EditBlogPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },
-      { path: 'subscription', element: <SubscriptionPage /> },
+      { path: 'subscription', element: <SubscriptionHistoryPage /> },
+      { path: 'subscription/current', element: <CurrentSubscriptionPage /> },
       { path: 'subscription-history', element: <SubscriptionHistoryPage /> },
     ],
   },
