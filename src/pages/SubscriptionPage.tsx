@@ -139,7 +139,7 @@ function SubscriptionPage() {
   const fetchOverview = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true)
     try {
-      const response = await api.get('/partner/subscription')
+      const response = await api.get('/partner/subscription/overview')
       const data = response.data.data as Overview
       setOverview(data)
       if (data.pendingPayment) {
@@ -334,7 +334,7 @@ function SubscriptionPage() {
               <div>
                 <p className="mb-3 text-sm font-semibold">Included in your plan</p>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {[`Up to ${plan.maxBuses} buses`, `Up to ${plan.maxRoutes} routes`, ...plan.planFeatures]
+                  {[`Up to ${plan.maxBuses} buses`, `Up to ${plan.maxRoutes} routes`, ...(plan.planFeatures || [])]
                     .filter(Boolean)
                     .map((feature) => (
                       <div key={feature} className="flex items-center gap-2 text-sm text-slate-600">
@@ -399,29 +399,32 @@ function SubscriptionPage() {
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <History size={18} className="text-blue-600" />
-            Renewal history
-          </CardTitle>
-          <CardDescription>Up to 20 most recent subscription periods.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!overview?.history.length ? (
-            <div className="py-8 text-center text-sm text-slate-400">No renewal history yet.</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overview.history.map((item) => (
+      {(() => {
+        const historyList = overview?.history || []
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History size={18} className="text-blue-600" />
+                Renewal history
+              </CardTitle>
+              <CardDescription>Up to 20 most recent subscription periods.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!historyList.length ? (
+                <div className="py-8 text-center text-sm text-slate-400">No renewal history yet.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {historyList.map((item) => (
                   <TableRow key={item._id}>
                     <TableCell>
                       <p className="font-medium">{item.plan?.planName || 'Unknown plan'}</p>
@@ -443,6 +446,8 @@ function SubscriptionPage() {
           )}
         </CardContent>
       </Card>
+    )
+  })()}
 
       <Dialog open={paymentOpen} onOpenChange={(open) => {
         if (!open && payment?.status === 'PROCESSING') return

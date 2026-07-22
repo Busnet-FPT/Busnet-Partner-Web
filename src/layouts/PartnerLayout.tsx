@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Ticket,
   CreditCard,
+  History,
   User,
   ChevronDown,
   Edit,
@@ -37,6 +38,7 @@ import api from '@/services/api'
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Subscription', path: '/subscription', icon: CreditCard },
+  { label: 'Subscription History', path: '/subscription-history', icon: History },
   { label: 'Buses', path: '/buses', icon: Bus },
   { label: 'Routes', path: '/routes', icon: Route },
   { label: 'Schedules', path: '/schedules', icon: CalendarClock },
