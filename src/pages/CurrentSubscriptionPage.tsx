@@ -1,23 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ArrowLeft,
   CalendarDays,
   Check,
   CheckCircle2,
   Clock3,
   Copy,
   CreditCard,
+  History,
   LoaderCircle,
   RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
   XCircle,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
 import api from '@/services/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Card,
   CardContent,
@@ -33,6 +34,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 type Plan = {
   _id: string
@@ -92,6 +101,17 @@ type Overview = {
   subscription: Subscription | null
   pendingPayment: Payment | null
   queue: QueueItem[]
+  history: HistoryItem[]
+}
+
+type HistoryItem = {
+  _id: string
+  transactionId?: string
+  operation?: 'INITIAL' | 'EXTEND' | 'RENEW'
+  subscriptionDate: string
+  expirationDate: string
+  status: string
+  plan: Pick<Plan, '_id' | 'planName' | 'code' | 'durationDays'> | null
 }
 
 type QueueItem = {
@@ -136,7 +156,6 @@ const statusClass: Record<string, string> = {
 }
 
 function CurrentSubscriptionPage() {
-  const navigate = useNavigate()
   const [overview, setOverview] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [renewing, setRenewing] = useState(false)
@@ -151,6 +170,19 @@ function CurrentSubscriptionPage() {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState('')
+  const [historySearch, setHistorySearch] = useState('')
+
+  const filteredHistory = useMemo(() => {
+    if (!overview?.history) return []
+    if (!historySearch.trim()) return overview.history
+    const query = historySearch.toLowerCase().trim()
+    return overview.history.filter((item) => {
+      const planName = item.plan?.planName?.toLowerCase() || ''
+      const code = item.plan?.code?.toLowerCase() || ''
+      const status = item.status?.toLowerCase() || ''
+      return planName.includes(query) || code.includes(query) || status.includes(query)
+    })
+  }, [overview?.history, historySearch])
 
   const fetchOverview = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true)
@@ -288,7 +320,7 @@ function CurrentSubscriptionPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center text-slate-500">
+      <div className="flex min-h-105 items-center justify-center text-slate-500">
         <LoaderCircle className="mr-2 animate-spin" size={20} />
         Loading subscription...
       </div>
@@ -301,14 +333,9 @@ function CurrentSubscriptionPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div className="flex items-start gap-3">
-          <Button variant="outline" size="icon" onClick={() => navigate('/subscription')}>
-            <ArrowLeft size={17} />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold">Current subscription</h2>
-            <p className="text-slate-500">View your current plan, remaining time and upcoming plans.</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold">Current subscription</h2>
+          <p className="text-slate-500">View your current plan, remaining time and upcoming plans.</p>
         </div>
         <Button variant="outline" onClick={() => fetchOverview()}>
           <RefreshCw size={15} />
@@ -365,9 +392,17 @@ function CurrentSubscriptionPage() {
                 <div className="rounded-lg bg-slate-50 p-4">
                   <p className="text-xs font-medium uppercase text-slate-400">Remaining</p>
                   <p className="mt-1 font-semibold">
-                    {subscription.remainingTime.expired
-                      ? 'Expired'
-                      : `${subscription.remainingTime.days}d ${subscription.remainingTime.hours}h ${subscription.remainingTime.minutes}m`}
+                    {subscription.remainingTime
+                      ? subscription.remainingTime.expired
+                        ? 'Expired'
+                        : `${subscription.remainingTime.days}d ${subscription.remainingTime.hours}h ${subscription.remainingTime.minutes}m`
+                      : typeof subscription.daysRemaining === 'number'
+                        ? subscription.daysRemaining <= 0
+                          ? 'Expired'
+                          : `${subscription.daysRemaining} days`
+                        : subscription.expirationDate && new Date(subscription.expirationDate).getTime() <= Date.now()
+                          ? 'Expired'
+                          : `${Math.max(0, Math.ceil(((new Date(subscription.expirationDate).getTime() || 0) - Date.now()) / (1000 * 60 * 60 * 24)))} days`}
                   </p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-4">
@@ -430,7 +465,7 @@ function CurrentSubscriptionPage() {
               </div>
               <Button
                 className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={!subscription.canExtend || renewing}
+                disabled={!(subscription.canExtend ?? subscription.canRenew) || renewing}
                 onClick={() => startPayment('EXTEND')}
               >
                 {renewing ? <LoaderCircle className="animate-spin" /> : <CreditCard />}
@@ -494,6 +529,66 @@ function CurrentSubscriptionPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History size={18} className="text-blue-600" />
+              Renewal history
+            </CardTitle>
+            <CardDescription>
+              Up to 20 most recent subscription periods.
+            </CardDescription>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search plan, code, status..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              className="pl-9 text-sm"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!overview?.history?.length ? (
+            <div className="py-8 text-center text-sm text-slate-400">No renewal history yet.</div>
+          ) : !filteredHistory.length ? (
+            <div className="py-8 text-center text-sm text-slate-400">No matching renewal history found.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredHistory.map((item) => (
+                  <TableRow key={item._id}>
+                    <TableCell>
+                      <p className="font-medium">{item.plan?.planName || 'Unknown plan'}</p>
+                      <p className="text-xs text-slate-400">{item.plan?.code}</p>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {formatDate(item.subscriptionDate)} – {formatDate(item.expirationDate)}
+                    </TableCell>
+                    <TableCell>{item.plan?.durationDays || '—'} days</TableCell>
+                    <TableCell>
+                      <Badge className={statusClass[item.status] || 'bg-slate-100 text-slate-600'}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       <Dialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -511,7 +606,7 @@ function CurrentSubscriptionPage() {
               No other active subscription plans are available.
             </div>
           ) : (
-            <div className="grid max-h-[420px] gap-3 overflow-y-auto py-1 sm:grid-cols-2">
+            <div className="grid max-h-105 gap-3 overflow-y-auto py-1 sm:grid-cols-2">
               {renewOptions.map((option) => {
                 const finalPrice = Math.max(0, Math.round(option.price * (1 - (option.discount || 0) / 100)))
                 const selected = selectedPlanId === option._id

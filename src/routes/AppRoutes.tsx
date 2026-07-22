@@ -70,7 +70,7 @@ export const router = createBrowserRouter([
       { path: 'blogs/:id/edit', element: <EditBlogPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },
-      { path: 'subscription', element: <SubscriptionHistoryPage /> },
+      { path: 'subscription', element: <CurrentSubscriptionPage /> },
       { path: 'subscription/current', element: <CurrentSubscriptionPage /> },
       { path: 'subscription-history', element: <SubscriptionHistoryPage /> },
     ],
